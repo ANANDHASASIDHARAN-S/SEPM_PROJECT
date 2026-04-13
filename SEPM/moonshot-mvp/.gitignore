@@ -1,0 +1,21 @@
+# Monorepo
+node_modules/
+.next/
+out/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+
+# OS / IDE
+.DS_Store
+.vscode/
