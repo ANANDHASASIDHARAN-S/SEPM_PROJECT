@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Leave Requests{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">Leave Requests</h2>
+    <p class="text-gray-500 text-sm mt-1">Review and manage leave requests from your team.</p>
+</div>
+
+<!-- Status Filter -->
+<div class="flex gap-2 mb-6">
+    {% for s in ['pending', 'approved', 'rejected', 'all'] %}
+    <a href="{{ url_for('leave_requests', status=s) }}"
+       class="px-4 py-1.5 rounded-full text-sm font-medium transition
+              {% if status_filter == s %}bg-brand text-white{% else %}bg-white text-gray-600 border hover:bg-gray-50{% endif %}">
+        {{ s|capitalize }}
+    </a>
+    {% endfor %}
+</div>
+
+<!-- Requests -->
+{% if requests %}
+<div class="space-y-4">
+    {% for req in requests %}
+    <div class="bg-white rounded-xl shadow-sm p-5 border-l-4
+                {% if req.status == 'pending' %}border-amber-400
+                {% elif req.status == 'approved' %}border-green-400
+                {% else %}border-red-400{% endif %}">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div class="flex items-start gap-4">
+                <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-600 flex-shrink-0">
+                    {{ req.applicant.first_name[0] }}{{ req.applicant.last_name[0] }}
+                </div>
+                <div>
+                    <p class="font-semibold text-gray-800">{{ req.applicant.full_name }}</p>
+                    <p class="text-sm text-gray-500">
+                        {{ req.leave_type.name }} · {{ req.start_date.strftime('%b %d') }} – {{ req.end_date.strftime('%b %d, %Y') }}
+                        · <strong>{{ req.total_days|int }} day(s)</strong>
+                    </p>
+                    {% if req.reason %}
+                    <p class="text-sm text-gray-400 mt-1"><i class="fa-solid fa-quote-left text-xs mr-1"></i>{{ req.reason }}</p>
+                    {% endif %}
+                    <p class="text-xs text-gray-400 mt-1">Applied: {{ req.created_at.strftime('%b %d, %Y at %H:%M') }}</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 flex-shrink-0">
+                {% if req.status == 'pending' %}
+                    <!-- Approve Form -->
+                    <form method="POST" action="{{ url_for('approve_leave', request_id=req.id) }}" class="flex items-center gap-2">
+                        <input type="text" name="comment" placeholder="Comment (optional)"
+                               class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-40 outline-none focus:ring-1 focus:ring-brand">
+                        <button type="submit" class="bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1">
+                            <i class="fa-solid fa-check"></i> Approve
+                        </button>
+                    </form>
+                    <!-- Reject Form -->
+                    <form method="POST" action="{{ url_for('reject_leave', request_id=req.id) }}" class="flex items-center gap-2">
+                        <input type="hidden" name="comment" value="">
+                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1"
+                                onclick="let c = prompt('Reason for rejection (optional):'); if(c !== null) { this.form.comment.value = c; return true; } return false;">
+                            <i class="fa-solid fa-xmark"></i> Reject
+                        </button>
+                    </form>
+                {% else %}
+                    <span class="status-badge status-{{ req.status }}">{{ req.status|capitalize }}</span>
+                    {% if req.review_comment %}
+                    <span class="text-xs text-gray-400 ml-2">{{ req.review_comment }}</span>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-xl shadow-sm p-10 text-center">
+    <i class="fa-solid fa-inbox text-4xl text-gray-300 mb-3"></i>
+    <p class="text-gray-500">No {{ status_filter if status_filter != 'all' else '' }} requests found.</p>
+</div>
+{% endif %}
+{% endblock %}

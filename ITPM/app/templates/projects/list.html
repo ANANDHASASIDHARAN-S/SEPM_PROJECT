@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Projects - Resource Allocation System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h1 class="page-title"><i class="fas fa-project-diagram"></i> Projects</h1>
+            </div>
+            <div class="col-auto">
+                {% if current_user.role.value in ['Admin', 'Project Manager'] %}
+                <a href="{{ url_for('projects.create_project') }}" class="btn btn-primary">
+                    <i class="fas fa-plus-circle"></i> Create Project
+                </a>
+                {% endif %}
+                <a href="{{ url_for('projects.export_projects_csv') }}" class="btn btn-success">
+                    <i class="fas fa-download"></i> Export CSV
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filter Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-6">
+                    <input type="text" name="search" class="form-control" placeholder="Search by project name" value="{{ search }}">
+                </div>
+                <div class="col-md-4">
+                    <select name="status" class="form-select">
+                        <option value="">All Status</option>
+                        {% for st in statuses %}
+                        <option value="{{ st }}" {% if st == status %}selected{% endif %}>{{ st }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Projects Grid -->
+    {% if projects.items %}
+    <div class="row">
+        {% for proj in projects.items %}
+        <div class="col-lg-6 col-xl-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ proj.name }}</h5>
+                    <span class="badge" style="background-color: 
+                        {% if proj.status == 'Completed' %}#28a745
+                        {% elif proj.status == 'In Progress' %}#17a2b8
+                        {% elif proj.status == 'On Hold' %}#ffc107
+                        {% elif proj.status == 'Cancelled' %}#dc3545
+                        {% else %}#6c757d{% endif %}">
+                        {{ proj.status }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">{{ proj.description[:100] }}{% if proj.description|length > 100 %}...{% endif %}</p>
+                    
+                    <dl class="small">
+                        <dt>Deadline</dt>
+                        <dd class="">
+                            {{ proj.deadline.strftime('%Y-%m-%d') }}
+                        </dd>
+                        
+                        <dt>Budget</dt>
+                        <dd>${{ "%.2f"|format(proj.budget) if proj.budget else 'N/A' }}</dd>
+                        
+                        <dt>Team Size</dt>
+                        <dd>{{ proj.allocations|length }} members</dd>
+                        
+                        <dt>Allocation</dt>
+                        <dd>{{ proj.get_total_allocation()|round(1) }}%</dd>
+                    </dl>
+                    
+                    <div class="progress mb-3" style="height: 8px;">
+                        <div class="progress-bar" style="width: {{ proj.get_total_allocation() }}%"></div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex gap-2">
+                    <a href="{{ url_for('projects.view_project', project_id=proj.id) }}" class="btn btn-sm btn-info flex-grow-1">
+                        <i class="fas fa-eye"></i> View
+                    </a>
+                    {% if current_user.role.value in ['Admin', 'Project Manager'] %}
+                    <a href="{{ url_for('projects.edit_project', project_id=proj.id) }}" class="btn btn-sm btn-warning">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <form method="POST" action="{{ url_for('projects.delete_project', project_id=proj.id) }}" style="display: inline;" onsubmit="return confirm('Delete this project?');">
+                        <button type="submit" class="btn btn-sm btn-danger">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Pagination -->
+    {% if projects.pages > 1 %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if projects.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('projects.list_projects', page=projects.prev_num, search=search, status=status) }}">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </a>
+            </li>
+            {% endif %}
+            
+            {% for page_num in projects.iter_pages() %}
+                {% if page_num %}
+                <li class="page-item {% if page_num == projects.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('projects.list_projects', page=page_num, search=search, status=status) }}">
+                        {{ page_num }}
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if projects.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('projects.list_projects', page=projects.next_num, search=search, status=status) }}">
+                    Next <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> No projects found
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

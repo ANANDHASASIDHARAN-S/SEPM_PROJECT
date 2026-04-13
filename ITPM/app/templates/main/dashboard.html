@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Resource Allocation System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 30px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title"><i class="fas fa-chart-line"></i> Dashboard</h1>
+        <p class="text-muted">Welcome back, {{ current_user.username }}! Here's an overview of your workforce.</p>
+    </div>
+    
+    <!-- Stat Cards Row 1 -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_employees }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-users text-info"></i> Total Employees
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_projects }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-project-diagram text-warning"></i> Total Projects
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card">
+                <div class="stat-value">{{ active_projects }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-play-circle text-success"></i> Active Projects
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card">
+                <div class="stat-value">{{ avg_utilization }}%</div>
+                <div class="stat-label">
+                    <i class="fas fa-chart-pie text-danger"></i> Avg Utilization
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-chart-doughnut"></i> Project Status Distribution
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="projectStatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-chart-bar"></i> Top Employee Workload
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="employeeWorkloadChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activities -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-history"></i> Recent Activities
+                </div>
+                <div class="card-body">
+                    {% if recent_logs %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                    <th>Entity</th>
+                                    <th>Date & Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in recent_logs[:10] %}
+                                <tr>
+                                    <td>
+                                        <span class="badge" style="background-color: #007bff;">
+                                            <i class="fas fa-user"></i> {{ log.user.username }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if log.action == 'CREATE' %}
+                                            <span class="badge bg-success"><i class="fas fa-plus"></i> Create</span>
+                                        {% elif log.action == 'UPDATE' %}
+                                            <span class="badge bg-info"><i class="fas fa-edit"></i> Update</span>
+                                        {% elif log.action == 'DELETE' %}
+                                            <span class="badge bg-danger"><i class="fas fa-trash"></i> Delete</span>
+                                        {% elif log.action == 'LOGIN' %}
+                                            <span class="badge bg-success"><i class="fas fa-sign-in-alt"></i> Login</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ log.action }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><strong>{{ log.entity_type }}</strong></td>
+                                    <td>
+                                        <small class="text-muted">{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4">No recent activities</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h5 class="mb-3"><i class="fas fa-bolt"></i> Quick Actions</h5>
+            <div class="btn-group" role="group">
+                {% if current_user.role.value in ['Admin', 'HR Manager'] %}
+                <a href="{{ url_for('employees.create_employee') }}" class="btn btn-primary">
+                    <i class="fas fa-user-plus"></i> Add Employee
+                </a>
+                {% endif %}
+                
+                {% if current_user.role.value in ['Admin', 'Project Manager'] %}
+                <a href="{{ url_for('projects.create_project') }}" class="btn btn-primary">
+                    <i class="fas fa-plus-circle"></i> New Project
+                </a>
+                {% endif %}
+                
+                {% if current_user.role.value in ['Admin', 'Project Manager', 'HR Manager'] %}
+                <a href="{{ url_for('allocations.create_allocation') }}" class="btn btn-primary">
+                    <i class="fas fa-user-tie"></i> Allocate Resource
+                </a>
+                {% endif %}
+                
+                {% if current_user.role.value in ['Admin', 'HR Manager', 'Top Management', 'Project Manager'] %}
+                <a href="{{ url_for('main.workforce_report') }}" class="btn btn-info">
+                    <i class="fas fa-file-download"></i> Download Report
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Project Status Chart
+        const projectStatusCtx = document.getElementById('projectStatusChart');
+        if (projectStatusCtx) {
+            new Chart(projectStatusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: [
+                        {% for status, count in project_status_data %}
+                            '{{ status }}',
+                        {% endfor %}
+                    ],
+                    datasets: [{
+                        data: [
+                            {% for status, count in project_status_data %}
+                                {{ count }},
+                            {% endfor %}
+                        ],
+                        backgroundColor: [
+                            '#dc3545',
+                            '#ffc107',
+                            '#17a2b8',
+                            '#28a745',
+                            '#6c757d'
+                        ],
+                        borderColor: '#1a1a1a',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#e0e0e0'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Employee Workload Chart
+        const workloadCtx = document.getElementById('employeeWorkloadChart');
+        if (workloadCtx) {
+            new Chart(workloadCtx, {
+                type: 'bar',
+                data: {
+                    labels: [
+                        {% for emp in employee_workload %}
+                            '{{ emp.name }}',
+                        {% endfor %}
+                    ],
+                    datasets: [{
+                        label: 'Workload %',
+                        data: [
+                            {% for emp in employee_workload %}
+                                {{ emp.workload }},
+                            {% endfor %}
+                        ],
+                        backgroundColor: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            if (value >= 100) return '#dc3545';
+                            if (value >= 80) return '#ffc107';
+                            if (value >= 50) return '#007bff';
+                            return '#28a745';
+                        },
+                        borderColor: '#1a1a1a',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#e0e0e0'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#e0e0e0'
+                            },
+                            grid: {
+                                color: '#333'
+                            },
+                            max: 100
+                        },
+                        y: {
+                            ticks: {
+                                color: '#e0e0e0'
+                            },
+                            grid: {
+                                color: '#333'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

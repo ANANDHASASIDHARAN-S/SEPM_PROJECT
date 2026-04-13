@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}System Health - Resource Allocation System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-header">
+        <h1 class="page-title"><i class="fas fa-heartbeat"></i> System Health & Statistics</h1>
+    </div>
+    
+    <!-- Database Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-2 col-sm-4">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_records.users }}</div>
+                <div class="stat-label">Users</div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-4">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_records.employees }}</div>
+                <div class="stat-label">Employees</div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-4">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_records.projects }}</div>
+                <div class="stat-label">Projects</div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-4">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_records.allocations }}</div>
+                <div class="stat-label">Allocations</div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-4">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_records.skills }}</div>
+                <div class="stat-label">Skills</div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-4">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_records.audit_logs }}</div>
+                <div class="stat-label">Audit Logs</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Role Distribution -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-chart-bar"></i> User Role Distribution
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Role</th>
+                                <th>Count</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set total_users = role_distribution|map(attribute='count')|sum %}
+                            {% for role, count in role_distribution %}
+                            <tr>
+                                <td><strong>{{ role.value }}</strong></td>
+                                <td><span class="badge bg-info">{{ count }}</span></td>
+                                <td>
+                                    <div class="progress" style="height: 20px; min-width: 100px;">
+                                        {% set percentage = (count/total_users)*100 %}
+                                        <div class="progress-bar" style="width: {{ percentage }}%">
+                                            {{ "%.1f"|format(percentage) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Project Status Distribution -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-chart-pie"></i> Project Status Distribution
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Count</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set total_projects = project_status|map(attribute='count')|sum %}
+                            {% for status, count in project_status %}
+                            <tr>
+                                <td><strong>{{ status }}</strong></td>
+                                <td><span class="badge bg-success">{{ count }}</span></td>
+                                <td>
+                                    {% set percentage = (count/total_projects)*100 if total_projects > 0 else 0 %}
+                                    {% if status == 'Completed' %}
+                                        {% set color = '#28a745' %}
+                                    {% elif status == 'In Progress' %}
+                                        {% set color = '#17a2b8' %}
+                                    {% elif status == 'On Hold' %}
+                                        {% set color = '#ffc107' %}
+                                    {% elif status == 'Cancelled' %}
+                                        {% set color = '#dc3545' %}
+                                    {% else %}
+                                        {% set color = '#6c757d' %}
+                                    {% endif %}
+                                    <div class="progress" style="height: 20px; min-width: 100px;">
+                                        <div class="progress-bar" style="background-color: {{ color }}; width: {{ percentage }}%">
+                                            {{ "%.1f"|format(percentage) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Employee Utilization -->
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-tachometer-alt"></i> Employee Utilization Analysis
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <div class="stat-value text-warning">{{ underutilized_employees }}</div>
+                        <div class="stat-label">Underutilized (&lt;50%)</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <div class="stat-value text-success">{{ total_records.employees - underutilized_employees - fully_utilized_employees }}</div>
+                        <div class="stat-label">Optimally Utilized (50-100%)</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <div class="stat-value text-danger">{{ fully_utilized_employees }}</div>
+                        <div class="stat-label">Fully Utilized (100%)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

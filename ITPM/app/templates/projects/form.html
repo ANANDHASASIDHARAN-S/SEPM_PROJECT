@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Resource Allocation System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-header">
+        <h1 class="page-title"><i class="fas fa-project-diagram"></i> {{ title }}</h1>
+        <p class="text-muted">Fill in the project details below to get started. All required fields are marked with <span class="text-danger">*</span></p>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" novalidate id="projectForm">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">{{ form.name.label }} <span class="text-danger">*</span></label>
+                            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="Enter project name") }}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.name.errors %}<i class="fas fa-exclamation-circle me-1"></i>{{ error }} {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted d-block mt-1">Minimum 2 characters. This is the primary identifier for your project.</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">{{ form.description.label }}</label>
+                            {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""), rows=5, placeholder="Describe what this project will accomplish") }}
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.description.errors %}<i class="fas fa-exclamation-circle me-1"></i>{{ error }} {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted d-block mt-1">Provide context and details about the project scope.</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">{{ form.status.label }} <span class="text-danger">*</span></label>
+                            {{ form.status(class="form-select" + (" is-invalid" if form.status.errors else "")) }}
+                            {% if form.status.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.status.errors %}<i class="fas fa-exclamation-circle me-1"></i>{{ error }} {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted d-block mt-1">Select the current project status. Default is "Planning" for new projects.</small>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.start_date.label }}</label>
+                                {{ form.start_date(class="form-control" + (" is-invalid" if form.start_date.errors else ""), type="date") }}
+                                {% if form.start_date.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.start_date.errors %}<i class="fas fa-exclamation-circle me-1"></i>{{ error }} {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="text-muted d-block mt-1">When the project will start (optional).</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.deadline.label }} <span class="text-danger">*</span></label>
+                                {{ form.deadline(class="form-control" + (" is-invalid" if form.deadline.errors else ""), type="date") }}
+                                {% if form.deadline.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.deadline.errors %}<i class="fas fa-exclamation-circle me-1"></i>{{ error }} {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="text-muted d-block mt-1">When the project must be completed.</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">{{ form.budget.label }}</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                {{ form.budget(class="form-control" + (" is-invalid" if form.budget.errors else ""), placeholder="0.00", type="number", step="0.01") }}
+                            </div>
+                            {% if form.budget.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.budget.errors %}<i class="fas fa-exclamation-circle me-1"></i>{{ error }} {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted d-block mt-1">Total budget allocated for this project. Used for cost tracking.</small>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label">{{ form.required_skills.label }}</label>
+                            {{ form.required_skills(class="form-select" + (" is-invalid" if form.required_skills.errors else ""), size=5) }}
+                            <small class="text-muted d-block mt-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Hold <kbd>Ctrl</kbd> (or <kbd>Cmd</kbd> on Mac) to select multiple skills.
+                                Select the skills your team will need.
+                            </small>
+                            {% if form.required_skills.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.required_skills.errors %}<i class="fas fa-exclamation-circle me-1"></i>{{ error }} {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                            {{ form.submit(class="btn btn-lg btn-primary", id="submitBtn") }}
+                            <a href="{{ url_for('projects.list_projects') }}" class="btn btn-lg btn-outline-secondary">Cancel</a>
+                        </div>
+                        <small class="text-muted d-block mt-3 text-center">After creating the project, you'll be able to allocate team members and manage skills.</small>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <!-- Help Panel -->
+            <div class="card mb-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-lightbulb"></i> Project Basics</h6>
+                </div>
+                <div class="card-body small">
+                    <p><strong>Project Name:</strong> A clear, identifiable name for your project.</p>
+                    <p><strong>Status:</strong> Current phase (Planning, In Progress, On Hold, Completed, Cancelled).</p>
+                    <p><strong>Deadline:</strong> Required - when the project must be complete.</p>
+                    <p><strong>Budget:</strong> Total funds allocated for the project.</p>
+                    <p><strong>Required Skills:</strong> Competencies needed from your team.</p>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header bg-light text-success">
+                    <h6 class="mb-0"><i class="fas fa-check-circle"></i> What's Next?</h6>
+                </div>
+                <div class="card-body small">
+                    <ol>
+                        <li>Fill in the project details</li>
+                        <li>Select required skills</li>
+                        <li>Click <strong>"{{ form.submit.label }}"</strong></li>
+                        <li>View resource suggestions</li>
+                        <li>Allocate team members</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body small">
+                    <p class="mb-0"><strong>💡 Tip:</strong> Start with essential skills. You can always add more skills or team members later!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Form validation feedback
+document.getElementById('projectForm').addEventListener('submit', function(e) {
+    const form = this;
+    if (!form.checkValidity()) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    form.classList.add('was-validated');
+});
+</script>
+{% endblock %}

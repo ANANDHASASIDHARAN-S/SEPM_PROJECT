@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Resource Allocations - Resource Allocation System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h1 class="page-title"><i class="fas fa-tasks"></i> Resource Allocations</h1>
+            </div>
+            <div class="col-auto">
+                {% if current_user.role.value in ['Admin', 'Project Manager', 'HR Manager'] %}
+                <a href="{{ url_for('allocations.create_allocation') }}" class="btn btn-primary">
+                    <i class="fas fa-user-tie"></i> New Allocation
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filter Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <select name="employee" class="form-select">
+                        <option value="">All Employees</option>
+                        {% for emp in employees %}
+                        <option value="{{ emp.id }}" {% if emp.id == selected_employee %}selected{% endif %}>{{ emp.get_full_name() }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select name="project" class="form-select">
+                        <option value="">All Projects</option>
+                        {% for proj in projects %}
+                        <option value="{{ proj.id }}" {% if proj.id == selected_project %}selected{% endif %}>{{ proj.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Allocations Table -->
+    <div class="card">
+        <div class="card-body">
+            {% if allocations.items %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Project</th>
+                            <th>Allocation</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for alloc in allocations.items %}
+                        <tr>
+                            <td><strong>{{ alloc.employee.get_full_name() }}</strong></td>
+                            <td>{{ alloc.project.name }}</td>
+                            <td>
+                                <div class="progress" style="min-width: 100px;">
+                                    <div class="progress-bar {% if alloc.allocation_percentage >= 100 %}bg-danger{% elif alloc.allocation_percentage >= 80 %}bg-warning{% elif alloc.allocation_percentage >= 50 %}bg-info{% else %}bg-success{% endif %}" 
+                                         style="width: {{ alloc.allocation_percentage }}%">{{ alloc.allocation_percentage }}%</div>
+                                </div>
+                            </td>
+                            <td>{{ alloc.allocation_date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ alloc.end_date.strftime('%Y-%m-%d') if alloc.end_date else 'Open-ended' }}</td>
+                            <td>
+                                <span class="badge" style="background-color: 
+                                    {% if alloc.project.status == 'Completed' %}#28a745
+                                    {% elif alloc.project.status == 'In Progress' %}#17a2b8
+                                    {% elif alloc.project.status == 'On Hold' %}#ffc107
+                                    {% elif alloc.project.status == 'Cancelled' %}#dc3545
+                                    {% else %}#6c757d{% endif %}">
+                                    {{ alloc.project.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('allocations.view_allocation', allocation_id=alloc.id) }}" class="btn btn-sm btn-info" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if current_user.role.value in ['Admin', 'Project Manager', 'HR Manager'] %}
+                                <a href="{{ url_for('allocations.edit_allocation', allocation_id=alloc.id) }}" class="btn btn-sm btn-warning" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('allocations.delete_allocation', allocation_id=alloc.id) }}" style="display: inline;" onsubmit="return confirm('Delete this allocation?');">
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if allocations.pages > 1 %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if allocations.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('allocations.list_allocations', page=allocations.prev_num, employee=selected_employee, project=selected_project) }}">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in allocations.iter_pages() %}
+                        {% if page_num %}
+                        <li class="page-item {% if page_num == allocations.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('allocations.list_allocations', page=page_num, employee=selected_employee, project=selected_project) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if allocations.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('allocations.list_allocations', page=allocations.next_num, employee=selected_employee, project=selected_project) }}">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <p class="text-muted text-center py-5">No allocations found</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

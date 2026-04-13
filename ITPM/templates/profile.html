@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">My Profile</h2>
+</div>
+
+<div class="max-w-3xl grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Profile Info -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="flex items-center gap-4 mb-6">
+            <div class="w-16 h-16 rounded-full bg-brand text-white flex items-center justify-center text-xl font-bold">
+                {{ current_user.first_name[0] }}{{ current_user.last_name[0] }}
+            </div>
+            <div>
+                <h3 class="text-xl font-bold text-gray-800">{{ current_user.full_name }}</h3>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand/10 text-brand capitalize">
+                    {{ current_user.role }}
+                </span>
+            </div>
+        </div>
+
+        <div class="space-y-3 text-sm">
+            <div class="flex justify-between py-2 border-b border-gray-100">
+                <span class="text-gray-500">Username</span>
+                <span class="font-medium text-gray-800">{{ current_user.username }}</span>
+            </div>
+            <div class="flex justify-between py-2 border-b border-gray-100">
+                <span class="text-gray-500">Email</span>
+                <span class="font-medium text-gray-800">{{ current_user.email }}</span>
+            </div>
+            <div class="flex justify-between py-2 border-b border-gray-100">
+                <span class="text-gray-500">Department</span>
+                <span class="font-medium text-gray-800">{{ current_user.department or '—' }}</span>
+            </div>
+            {% if current_user.manager %}
+            <div class="flex justify-between py-2 border-b border-gray-100">
+                <span class="text-gray-500">Manager</span>
+                <span class="font-medium text-gray-800">{{ current_user.manager.full_name }}</span>
+            </div>
+            {% endif %}
+            <div class="flex justify-between py-2 border-b border-gray-100">
+                <span class="text-gray-500">Status</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                      {% if current_user.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                    {{ 'Active' if current_user.is_active else 'Inactive' }}
+                </span>
+            </div>
+            <div class="flex justify-between py-2">
+                <span class="text-gray-500">Member Since</span>
+                <span class="font-medium text-gray-800">{{ current_user.created_at.strftime('%B %d, %Y') }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leave Balances -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <h3 class="font-semibold text-gray-800 mb-4">
+            <i class="fa-solid fa-calendar-days text-brand mr-2"></i>Leave Balances
+        </h3>
+        {% if balances %}
+        <div class="space-y-4">
+            {% for bal in balances %}
+            <div>
+                <div class="flex justify-between text-sm mb-1">
+                    <span class="font-medium text-gray-700">{{ bal.leave_type.name }}</span>
+                    <span class="text-gray-500">{{ bal.remaining_days|int }} / {{ bal.total_days|int }}</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    {% set pct = (bal.used_days / bal.total_days * 100) if bal.total_days > 0 else 0 %}
+                    <div class="h-2.5 rounded-full transition-all
+                                {% if pct > 80 %}bg-red-500{% elif pct > 50 %}bg-amber-500{% else %}bg-brand{% endif %}"
+                         style="width: {{ pct|int }}%"></div>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">{{ bal.used_days|int }} used of {{ bal.total_days|int }} total</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-400 text-sm">No leave balances found for this year.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

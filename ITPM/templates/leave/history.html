@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}Leave History{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800">Leave History</h2>
+        <p class="text-gray-500 text-sm mt-1">View all your past and current leave requests.</p>
+    </div>
+    <a href="{{ url_for('apply_leave') }}"
+       class="bg-brand hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+        <i class="fa-solid fa-plus"></i> New Request
+    </a>
+</div>
+
+<!-- Leave Balances Summary -->
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+    {% for bal in balances %}
+    <div class="bg-white rounded-lg shadow-sm p-4 text-center">
+        <p class="text-xs text-gray-500 mb-1">{{ bal.leave_type.name }}</p>
+        <p class="text-2xl font-bold {% if bal.remaining_days <= 2 %}text-red-500{% else %}text-brand{% endif %}">
+            {{ bal.remaining_days|int }}
+        </p>
+        <p class="text-xs text-gray-400">of {{ bal.total_days|int }} remaining</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Requests Table -->
+<div class="bg-white rounded-xl shadow-sm p-6">
+    {% if requests %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-gray-500 border-b">
+                    <th class="pb-3 font-medium">#</th>
+                    <th class="pb-3 font-medium">Type</th>
+                    <th class="pb-3 font-medium">Start</th>
+                    <th class="pb-3 font-medium">End</th>
+                    <th class="pb-3 font-medium">Days</th>
+                    <th class="pb-3 font-medium">Reason</th>
+                    <th class="pb-3 font-medium">Status</th>
+                    <th class="pb-3 font-medium">Reviewer Comment</th>
+                    <th class="pb-3 font-medium">Applied</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requests %}
+                <tr class="border-b border-gray-50 hover:bg-gray-50">
+                    <td class="py-3 text-gray-400">{{ req.id }}</td>
+                    <td class="py-3 font-medium">{{ req.leave_type.name }}</td>
+                    <td class="py-3">{{ req.start_date.strftime('%b %d, %Y') }}</td>
+                    <td class="py-3">{{ req.end_date.strftime('%b %d, %Y') }}</td>
+                    <td class="py-3">{{ req.total_days|int }}</td>
+                    <td class="py-3 text-gray-500 max-w-[200px] truncate">{{ req.reason or '—' }}</td>
+                    <td class="py-3">
+                        <span class="status-badge status-{{ req.status }}">{{ req.status|capitalize }}</span>
+                    </td>
+                    <td class="py-3 text-gray-500 max-w-[200px] truncate">{{ req.review_comment or '—' }}</td>
+                    <td class="py-3 text-gray-400">{{ req.created_at.strftime('%b %d, %Y') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-10">
+        <i class="fa-solid fa-inbox text-4xl text-gray-300 mb-3"></i>
+        <p class="text-gray-500">No leave requests found.</p>
+        <a href="{{ url_for('apply_leave') }}" class="text-brand hover:underline text-sm mt-2 inline-block">Apply for your first leave →</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

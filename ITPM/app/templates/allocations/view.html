@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Allocation Details - Resource Allocation System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h1 class="page-title"><i class="fas fa-user-tie"></i> Allocation Details</h1>
+            </div>
+            <div class="col-auto">
+                {% if current_user.role.value in ['Admin', 'Project Manager', 'HR Manager'] %}
+                <a href="{{ url_for('allocations.edit_allocation', allocation_id=allocation.id) }}" class="btn btn-warning">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                <form method="POST" action="{{ url_for('allocations.delete_allocation', allocation_id=allocation.id) }}" style="display: inline;" onsubmit="return confirm('Delete this allocation?');">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-4">
+            <!-- Allocation Summary -->
+            <div class="card mb-4">
+                <div class="card-header">Allocation Summary</div>
+                <div class="card-body">
+                    <dl>
+                        <dt>Allocation %</dt>
+                        <dd>
+                            <span class="badge bg-info" style="font-size: 1.2rem; padding: 8px 12px;">
+                                {{ allocation.allocation_percentage }}%
+                            </span>
+                        </dd>
+                        
+                        <dt>Start Date</dt>
+                        <dd>{{ allocation.allocation_date.strftime('%Y-%m-%d') }}</dd>
+                        
+                        <dt>End Date</dt>
+                        <dd>{{ allocation.end_date.strftime('%Y-%m-%d') if allocation.end_date else 'Open-ended' }}</dd>
+                        
+                        <dt>Allocated By</dt>
+                        <dd>{{ allocation.allocator.username if allocation.allocator else 'N/A' }}</dd>
+                        
+                        <dt>Created</dt>
+                        <dd>{{ allocation.created_at.strftime('%Y-%m-%d %H:%M') }}</dd>
+                    </dl>
+                </div>
+            </div>
+            
+            <!-- Skill Match -->
+            <div class="card">
+                <div class="card-header">Skill Match</div>
+                <div class="card-body">
+                    <div style="font-size: 2rem; font-weight: bold; color: #007bff; margin: 20px 0;">
+                        {{ skill_match }}%
+                    </div>
+                    <p class="text-muted text-center">Skill alignment between employee and project requirements</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-8">
+            <!-- Employee & Project Info -->
+            <div class="card mb-4">
+                <div class="card-header">Employee Information</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>{{ allocation.employee.get_full_name() }}</h5>
+                            <dl>
+                                <dt>Email</dt>
+                                <dd>{{ allocation.employee.email }}</dd>
+                                
+                                <dt>Department</dt>
+                                <dd>{{ allocation.employee.department or 'N/A' }}</dd>
+                                
+                                <dt>Position</dt>
+                                <dd>{{ allocation.employee.position or 'N/A' }}</dd>
+                                
+                                <dt>Experience</dt>
+                                <dd>{{ allocation.employee.years_of_experience }} years</dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Employee Skills</h5>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for skill in allocation.employee.skills %}
+                                <span class="badge bg-primary">{{ skill.name }}</span>
+                                {% else %}
+                                <p class="text-muted">No skills assigned</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">Project Information</div>
+                <div class="card-body">
+                    <h5>{{ allocation.project.name }}</h5>
+                    <p class="text-muted">{{ allocation.project.description }}</p>
+                    
+                    <dl class="row">
+                        <dt class="col-md-3">Status</dt>
+                        <dd class="col-md-9">
+                            <span class="badge" style="background-color: 
+                                {% if allocation.project.status == 'Completed' %}#28a745
+                                {% elif allocation.project.status == 'In Progress' %}#17a2b8
+                                {% elif allocation.project.status == 'On Hold' %}#ffc107
+                                {% elif allocation.project.status == 'Cancelled' %}#dc3545
+                                {% else %}#6c757d{% endif %}">
+                                {{ allocation.project.status }}
+                            </span>
+                        </dd>
+                        
+                        <dt class="col-md-3">Deadline</dt>
+                        <dd class="col-md-9">{{ allocation.project.deadline.strftime('%Y-%m-%d') }}</dd>
+                        
+                        <dt class="col-md-3">Required Skills</dt>
+                        <dd class="col-md-9">
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for skill in allocation.project.required_skills %}
+                                <span class="badge bg-info">{{ skill.name }}</span>
+                                {% else %}
+                                <span class="text-muted">None specified</span>
+                                {% endfor %}
+                            </div>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+            
+            <!-- Notes -->
+            {% if allocation.notes %}
+            <div class="card mt-4">
+                <div class="card-header">Notes</div>
+                <div class="card-body">
+                    <p>{{ allocation.notes }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,493 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - Resource Allocation System{% endblock %}
+
+{% block content %}
+<style>
+.skill-badge { display: inline-block; margin: 3px 5px; }
+.resource-card { transition: transform 0.2s, box-shadow 0.2s; }
+.resource-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.skill-match-high { color: #28a745; }
+.skill-match-medium { color: #ffc107; }
+.skill-match-low { color: #dc3545; }
+.coverage-bar { height: 8px; background: linear-gradient(90deg, #dc3545, #ffc107, #28a745); border-radius: 4px; }
+.required-badge { background-color: #007bff !important; }
+.available-badge { background-color: #17a2b8 !important; }
+.resource-gap { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin: 10px 0; border-radius: 4px; }
+.employee-tile { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 12px; margin: 8px 0; cursor: pointer; transition: 0.2s; }
+.employee-tile:hover { background: #e9ecef; border-color: #007bff; }
+</style>
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="row align-items-center mb-3">
+            <div class="col">
+                <h1 class="page-title"><i class="fas fa-project-diagram"></i> {{ project.name }}</h1>
+                <p class="text-muted mb-0">{{ project.description }}</p>
+            </div>
+            <div class="col-auto">
+                {% if current_user.role.value in ['Admin', 'Project Manager'] %}
+                <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" class="btn btn-warning btn-sm">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                <form method="POST" action="{{ url_for('projects.delete_project', project_id=project.id) }}" style="display: inline;" onsubmit="return confirm('Delete this project?');">
+                    <button type="submit" class="btn btn-danger btn-sm">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Allocation Prompt Alert -->
+    {% if show_allocate_prompt %}
+    <div class="alert alert-info alert-dismissible fade show mb-4" role="alert">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <i class="fas fa-lightbulb me-2"></i>
+                <strong>Project Created Successfully!</strong>
+                <p class="mb-0 mt-2 text-muted">Your new project is ready. Would you like to allocate team members now?</p>
+            </div>
+            <div class="flex-shrink-0">
+                <a href="{{ url_for('allocations.create_allocation') }}?project_id={{ project.id }}" class="btn btn-primary btn-sm me-2">
+                    <i class="fas fa-plus me-1"></i> Allocate Now
+                </a>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resource Suggestions Panel -->
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Suggested Resources for This Project</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Budget Analysis -->
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3 rounded" style="background-color: rgba(23, 162, 184, 0.1);">
+                                <h6 class="text-muted mb-2"><i class="fas fa-dollar-sign text-info"></i> Budget Analysis</h6>
+                                <h4 class="mb-2">${{ "%.2f"|format(resource_suggestions.budget.total) if resource_suggestions.budget.total else '0' }}</h4>
+                                <small class="text-muted d-block mb-2">Total Budget</small>
+                                {% if resource_suggestions.budget.team_members > 0 %}
+                                <small class="text-muted d-block">${{ "%.2f"|format(resource_suggestions.budget.per_member) }}/member</small>
+                                {% else %}
+                                <small class="text-warning d-block"><i class="fas fa-exclamation-circle"></i> No team allocated yet</small>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Timeline Analysis -->
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3 rounded" style="background-color: rgba(40, 167, 69, 0.1);">
+                                <h6 class="text-muted mb-2"><i class="fas fa-calendar text-success"></i> Timeline</h6>
+                                <h4 class="mb-2">{{ resource_suggestions.timeline.days if resource_suggestions.timeline else 'N/A' }} <small>days</small></h4>
+                                {% if resource_suggestions.timeline %}
+                                <small class="text-muted d-block">{{ resource_suggestions.timeline.status }}</small>
+                                <small class="text-muted d-block">~{{ resource_suggestions.timeline.weeks }} weeks</small>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Skills Required -->
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3 rounded" style="background-color: rgba(255, 193, 7, 0.1);">
+                                <h6 class="text-muted mb-2"><i class="fas fa-star text-warning"></i> Skills</h6>
+                                <h4 class="mb-2">{{ resource_suggestions.skills.total_required }} <small>Required</small></h4>
+                                <small class="text-muted d-block">{{ resource_suggestions.skills.covered }} Covered</small>
+                                <small class="text-danger d-block" {% if resource_suggestions.skills.gaps == 0 %}style="display:none;"{% endif %}>{{ resource_suggestions.skills.gaps }} Gap{{ 's' if resource_suggestions.skills.gaps != 1 else '' }}</small>
+                            </div>
+                        </div>
+
+                        <!-- Team Size Recommendation -->
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3 rounded" style="background-color: rgba(108, 117, 125, 0.1);">
+                                <h6 class="text-muted mb-2"><i class="fas fa-users text-secondary"></i> Recommended Team</h6>
+                                <h4 class="mb-2">{{ resource_suggestions.team_size.recommended_range[0] }}-{{ resource_suggestions.team_size.recommended_range[1] }} <small>members</small></h4>
+                                <small class="text-muted d-block">{{ resource_suggestions.team_size.recommendation }} Project</small>
+                                <small class="text-muted d-block">Current: {{ resource_suggestions.team_size.current_size }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Team Size Description -->
+                    <div class="mt-3 p-3 rounded" style="background-color: rgba(0, 123, 255, 0.05); border-left: 4px solid #007bff;">
+                        <p class="mb-0"><strong>Why {{ resource_suggestions.team_size.recommendation }}?</strong> {{ resource_suggestions.team_size.description }}</p>
+                    </div>
+
+                    <!-- Skills List -->
+                    {% if resource_suggestions.skills.list %}
+                    <div class="mt-3">
+                        <h6 class="text-muted mb-2"><i class="fas fa-check-circle text-success"></i> Required Competencies</h6>
+                        <div>
+                            {% for skill in resource_suggestions.skills.list %}
+                            <span class="badge bg-info me-2 mb-2">{{ skill }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Critical Recommendations -->
+                    {% if resource_suggestions.recommendations %}
+                    <div class="mt-4">
+                        <h6 class="text-muted mb-3"><i class="fas fa-exclamation-circle"></i> Important Notes</h6>
+                        {% for rec in resource_suggestions.recommendations %}
+                        <div class="alert alert-{{ rec.type }} mb-2" role="alert">
+                            <i class="fas fa-{{ rec.icon }} me-2"></i>
+                            <strong>{{ rec.title }}:</strong> {{ rec.message }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Project Overview Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card resource-card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Status</h6>
+                    <span class="badge" style="font-size: 14px; padding: 8px 12px; background-color: 
+                        {% if project.status == 'Completed' %}#28a745
+                        {% elif project.status == 'In Progress' %}#17a2b8
+                        {% elif project.status == 'On Hold' %}#ffc107
+                        {% elif project.status == 'Cancelled' %}#dc3545
+                        {% else %}#6c757d{% endif %}">
+                        {{ project.status }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card resource-card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Team Size</h6>
+                    <h3 class="mb-0">{{ allocated_employees_count }}</h3>
+                    <small class="text-muted">Members Allocated</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card resource-card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Budget</h6>
+                    <h3 class="mb-0">${{ "%.0f"|format(project.budget) if project.budget else '0' }}</h3>
+                    <small class="text-muted">Total Budget</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card resource-card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Deadline</h6>
+                    <h5 class="mb-0">{{ project.deadline.strftime('%b %d, %Y') }}</h5>
+                    <small class="text-muted">Due Date</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resource Allocation Progress -->
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-tasks"></i> Overall Resource Allocation</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="progress" style="height: 30px;">
+                                <div class="progress-bar {% if total_allocation >= 100 %}bg-danger{% elif total_allocation >= 80 %}bg-warning{% elif total_allocation >= 50 %}bg-info{% else %}bg-success{% endif %}" 
+                                     role="progressbar" 
+                                     style="width: {{ total_allocation }}%"
+                                     aria-valuenow="{{ total_allocation }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    {% if total_allocation > 0 %}{{ total_allocation|round(1) }}%{% else %}0%{% endif %}
+                                </div>
+                            </div>
+                            <small class="text-muted">Total team workload across all allocations</small>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <span class="badge bg-primary" style="font-size: 12px; padding: 8px;">
+                                <i class="fas fa-chart-pie"></i> {{ allocated_employees_count }} Members
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Skills & Resource Requirements -->
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-star"></i> Required Skills</h5>
+                </div>
+                <div class="card-body">
+                    {% if required_skills %}
+                    <div class="row">
+                        {% for skill in required_skills %}
+                        <div class="col-12 mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-info required-badge skill-badge">{{ skill.name }}</span>
+                                <span class="badge {% if skill_coverage[skill.id].covered_by > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ skill_coverage[skill.id].covered_by }} Covered
+                                </span>
+                            </div>
+                            {% if skill_coverage[skill.id].employees %}
+                            <small class="text-muted d-block mb-2">
+                                <i class="fas fa-check-circle text-success"></i>
+                                {% for emp in skill_coverage[skill.id].employees %}
+                                    {{ emp.get_full_name() }}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </small>
+                            {% else %}
+                            <small class="text-danger d-block mb-2">
+                                <i class="fas fa-exclamation-circle"></i> No one currently has this skill
+                            </small>
+                            {% endif %}
+                            {% if available_by_skill[skill.id] %}
+                            <small class="text-info d-block">
+                                <i class="fas fa-user-plus"></i>
+                                {{ available_by_skill[skill.id]|length }} Available: 
+                                {% for emp in available_by_skill[skill.id][:3] %}
+                                    {{ emp.get_full_name() }}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                                {% if available_by_skill[skill.id]|length > 3 %}...{% endif %}
+                            </small>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0"><i class="fas fa-info-circle"></i> No required skills specified</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Resource Gaps Summary -->
+            {% set skill_gaps = [] %}
+            {% for skill in required_skills if skill_coverage[skill.id].covered_by == 0 %}
+                {% if skill_gaps.append(skill) %}{% endif %}
+            {% endfor %}
+
+            {% if skill_gaps %}
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Resource Gaps</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">The following skills are required but not currently allocated:</p>
+                    {% for skill in skill_gaps %}
+                    <div class="resource-gap">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>{{ skill.name }}</strong>
+                            <span class="badge bg-danger">Missing</span>
+                        </div>
+                        {% if available_by_skill[skill.id] %}
+                        <p class="small mb-2"><i class="fas fa-check"></i> {{ available_by_skill[skill.id]|length }} employees available with this skill</p>
+                        {% if current_user.role.value in ['Admin', 'Project Manager', 'HR Manager'] %}
+                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#allocateSkillModal{{ skill.id }}">
+                            <i class="fas fa-plus"></i> Find Talent
+                        </button>
+                        {% endif %}
+                        {% else %}
+                        <p class="small text-danger mb-0"><i class="fas fa-times"></i> No available employees with this skill</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Team Members -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h5 class="mb-0"><i class="fas fa-users"></i> Allocated Team</h5>
+                        </div>
+                        <div class="col-auto">
+                            {% if current_user.role.value in ['Admin', 'Project Manager', 'HR Manager'] %}
+                            <a href="{{ url_for('allocations.create_allocation') }}?project_id={{ project.id }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-user-plus"></i> Add Member
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if allocations %}
+                    <div class="row">
+                        {% for alloc in allocations %}
+                        <div class="col-12 mb-3">
+                            <div class="employee-tile">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h6 class="mb-1">{{ alloc.employee.get_full_name() }}</h6>
+                                        <small class="text-muted">{{ alloc.employee.position }} • {{ alloc.employee.department }}</small>
+                                    </div>
+                                    <span class="badge bg-info">{{ alloc.allocation_percentage }}%</span>
+                                </div>
+                                {% if alloc.employee.skills %}
+                                <div class="mb-2">
+                                    {% set matched_skills = [] %}
+                                    {% for skill in alloc.employee.skills %}
+                                        {% if skill in required_skills and matched_skills.append(skill) %}{% endif %}
+                                    {% endfor %}
+                                    <small class="d-block mb-1">
+                                        <i class="fas fa-star-half"></i> 
+                                        {% if matched_skills %}
+                                            <span class="skill-match-high">{{ matched_skills|length }}/{{ required_skills|length }} Skills Match</span>
+                                        {% else %}
+                                            <span class="skill-match-low">{{ matched_skills|length }}/{{ required_skills|length }} Skills Match</span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                {% endif %}
+                                <div class="d-flex gap-1">
+                                    <a href="{{ url_for('allocations.view_allocation', allocation_id=alloc.id) }}" class="btn btn-xs btn-info" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if current_user.role.value in ['Admin', 'Project Manager', 'HR Manager'] %}
+                                    <a href="{{ url_for('allocations.edit_allocation', allocation_id=alloc.id) }}" class="btn btn-xs btn-warning" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form method="POST" action="{{ url_for('allocations.delete_allocation', allocation_id=alloc.id) }}" style="display: inline;" onsubmit="return confirm('Remove this allocation?');">
+                                        <button type="submit" class="btn btn-xs btn-danger" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle"></i> No team members allocated yet. 
+                        {% if current_user.role.value in ['Admin', 'Project Manager', 'HR Manager'] %}
+                        <a href="{{ url_for('allocations.create_allocation') }}?project_id={{ project.id }}" class="alert-link">Add the first member</a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Available Employees for Quick Assignment -->
+    {% if current_user.role.value in ['Admin', 'Project Manager', 'HR Manager'] and all_available_employees %}
+    <div class="row mt-4">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-user-circle"></i> Available Resources</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Other employees who may be available for allocation:</p>
+                    <div class="row">
+                        {% for emp in all_available_employees %}
+                        <div class="col-lg-6 mb-3">
+                            <div class="employee-tile">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ emp.get_full_name() }}</h6>
+                                        <small class="text-muted d-block">{{ emp.position }} • {{ emp.department }}</small>
+                                        {% if emp.skills %}
+                                        <small class="d-block mt-2">
+                                            {% for skill in emp.skills %}
+                                                {% if skill in required_skills %}
+                                                <span class="badge bg-success">{{ skill.name }}</span>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </small>
+                                        {% endif %}
+                                        <div class="mt-2">
+                                            {% set current_workload = emp.get_current_workload() %}
+                                            <small class="text-muted">Capacity: {{ 100 - current_workload }}% available</small>
+                                            <div class="progress" style="height: 6px;">
+                                                <div class="progress-bar" style="width: {{ current_workload }}%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <a href="{{ url_for('allocations.create_allocation') }}?employee_id={{ emp.id }}&project_id={{ project.id }}" 
+                                       class="btn btn-sm btn-outline-primary ms-2 flex-shrink-0">
+                                        <i class="fas fa-plus"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modals for Quick Skill Allocation -->
+{% for skill in skill_gaps %}
+<div class="modal fade" id="allocateSkillModal{{ skill.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Find Talent for <strong>{{ skill.name }}</strong></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {% if available_by_skill[skill.id] %}
+                <div class="list-group">
+                    {% for emp in available_by_skill[skill.id][:5] %}
+                    <a href="{{ url_for('employees.view_employee', employee_id=emp.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ emp.get_full_name() }}</h6>
+                                <small class="text-muted">{{ emp.position }} • {{ emp.department }}</small>
+                            </div>
+                            <a href="{{ url_for('allocations.create_allocation') }}?employee_id={{ emp.id }}&project_id={{ project.id }}" 
+                               class="btn btn-sm btn-primary">
+                                Allocate
+                            </a>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No available employees with this skill at the moment.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<script>
+// Make employee tiles clickable for viewing details
+document.querySelectorAll('.employee-tile').forEach(tile => {
+    tile.addEventListener('click', function(e) {
+        if (!e.target.closest('a, button, form')) {
+            const link = this.querySelector('a[href*="/allocations/"]');
+            if (link) link.click();
+        }
+    });
+});
+</script>
+{% endblock %}

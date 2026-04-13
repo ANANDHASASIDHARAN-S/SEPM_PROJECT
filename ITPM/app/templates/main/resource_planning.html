@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}Resource Planning - Resource Allocation System{% endblock %}
+
+{% block content %}
+<style>
+.gap-card { border-left: 4px solid #ffc107; background: #fffbf0; }
+.covered-card { border-left: 4px solid #28a745; background: #f0fff4; }
+.skill-gap-badge { background: #fff3cd !important; color: #856404 !important; }
+.skill-covered-badge { background: #d4edda !important; color: #155724 !important; }
+.resource-card { transition: all 0.3s ease; }
+.resource-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+</style>
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="page-header">
+        <h1 class="page-title"><i class="fas fa-chart-network"></i> Resource Planning Dashboard</h1>
+        <p class="text-muted">Comprehensive view of all project resource requirements and skill gaps</p>
+    </div>
+
+    <!-- Overall Summary -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card resource-card">
+                <div class="card-body text-center">
+                    <h3 class="mb-1">{{ total_projects }}</h3>
+                    <p class="text-muted mb-0"><i class="fas fa-project-diagram"></i> Active Projects</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card resource-card">
+                <div class="card-body text-center">
+                    <h3 class="mb-1 {% if total_gaps > 0 %}text-warning{% else %}text-success{% endif %}">{{ total_gaps }}</h3>
+                    <p class="text-muted mb-0"><i class="fas fa-exclamation-triangle"></i> Skill Gaps</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card resource-card">
+                <div class="card-body text-center">
+                    <h3 class="mb-1">{{ overall_coverage|round(1) }}%</h3>
+                    <p class="text-muted mb-0"><i class="fas fa-chart-pie"></i> Overall Coverage</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card resource-card">
+                <div class="card-body text-center">
+                    <div class="progress" style="height: 30px;">
+                        <div class="progress-bar {% if overall_coverage >= 80 %}bg-success{% elif overall_coverage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                             style="width: {{ overall_coverage }}%">
+                            <span style="font-size: 12px;">{{ overall_coverage|round(0) }}%</span>
+                        </div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">Skill Requirements Met</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Projects with Resource Analysis -->
+    <div class="row">
+        {% if project_analysis %}
+            {% for analysis in project_analysis %}
+            <div class="col-lg-12 mb-4">
+                <div class="card resource-card {% if analysis.gap_count > 0 %}gap-card{% else %}covered-card{% endif %}">
+                    <!-- Project Header -->
+                    <div class="card-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-project-diagram"></i> 
+                                    {{ analysis.project.name }}
+                                </h5>
+                                <small class="text-muted">{{ analysis.project.description }}</small>
+                            </div>
+                            <div class="col-auto">
+                                {% if analysis.gap_count > 0 %}
+                                <span class="badge bg-warning">{{ analysis.gap_count }} Gaps</span>
+                                {% else %}
+                                <span class="badge bg-success"><i class="fas fa-check-circle"></i> All Covered</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Project Body -->
+                    <div class="card-body">
+                        <!-- Coverage Overview -->
+                        <div class="row mb-4">
+                            <div class="col-md-8">
+                                <h6 class="mb-3">Skill Coverage</h6>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar {% if analysis.coverage_percentage >= 100 %}bg-success{% elif analysis.coverage_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                         style="width: {{ analysis.coverage_percentage }}%">
+                                        {{ analysis.coverage_percentage|round(1) }}%
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <p class="mb-0">
+                                    <strong>{{ analysis.allocated_count }}</strong> Members Allocated
+                                </p>
+                                <small class="text-muted">Out of {{ analysis.skill_coverage|length }} Required Skills</small>
+                            </div>
+                        </div>
+
+                        <!-- Skills Grid -->
+                        <div class="row">
+                            <!-- Covered Skills -->
+                            <div class="col-lg-6 mb-3">
+                                <h6 class="text-success mb-3"><i class="fas fa-check-circle"></i> Covered Skills</h6>
+                                {% set covered_count = 0 %}
+                                {% for skill_id, skill_info in analysis.skill_coverage.items() %}
+                                    {% if skill_info.covered %}
+                                        {% if covered_count == 0 %}
+                                        <div class="row">
+                                        {% endif %}
+                                        <div class="col-12 mb-2">
+                                            <span class="badge skill-covered-badge">
+                                                <i class="fas fa-check"></i> {{ skill_info.skill.name }} 
+                                                <span class="badge bg-success">{{ skill_info.by }}x</span>
+                                            </span>
+                                        </div>
+                                        {% set covered_count = covered_count + 1 %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% if covered_count == 0 %}
+                                <p class="text-muted small">None covered yet</p>
+                                {% else %}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Skill Gaps -->
+                            <div class="col-lg-6 mb-3">
+                                <h6 class="text-danger mb-3"><i class="fas fa-exclamation-circle"></i> Skill Gaps</h6>
+                                {% if analysis.skill_gaps %}
+                                <div class="row">
+                                    {% for gap in analysis.skill_gaps %}
+                                    <div class="col-12 mb-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="badge skill-gap-badge">
+                                                <i class="fas fa-times"></i> {{ gap.skill.name }}
+                                            </span>
+                                            {% if gap.available > 0 %}
+                                            <small class="text-info">
+                                                <i class="fas fa-user-check"></i> {{ gap.available }} Available
+                                            </small>
+                                            {% else %}
+                                            <small class="text-danger">
+                                                <i class="fas fa-user-slash"></i> None Available
+                                            </small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <p class="text-muted small">All skills covered!</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="mt-3 pt-3 border-top">
+                            <a href="{{ url_for('projects.view_project', project_id=analysis.project.id) }}" class="btn btn-sm btn-info">
+                                <i class="fas fa-eye"></i> View Project
+                            </a>
+                            {% if analysis.gap_count > 0 %}
+                            <a href="{{ url_for('allocations.create_allocation') }}?project_id={{ analysis.project.id }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-user-plus"></i> Allocate Resources
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-info text-center" role="alert">
+                <i class="fas fa-info-circle"></i> No active projects at the moment
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Legend -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-info-circle"></i> Legend</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <p class="mb-0">
+                                <span class="badge skill-covered-badge">
+                                    <i class="fas fa-check"></i> Covered Skill
+                                </span> - Skill is assigned to team members
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <p class="mb-0">
+                                <span class="badge skill-gap-badge">
+                                    <i class="fas fa-times"></i> Skill Gap
+                                </span> - Skill is required but not assigned
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <p class="mb-0">
+                                <small class="text-info"><i class="fas fa-user-check"></i> Available</small> - Employees without this skill  assignment yet
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

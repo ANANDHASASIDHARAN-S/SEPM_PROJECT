@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block title %}Leave Policies{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">Leave Policies</h2>
+    <p class="text-gray-500 text-sm mt-1">Configure company-wide leave rules and constraints.</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Add / Edit Policy Form -->
+    <div class="lg:col-span-1">
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h3 class="font-semibold text-gray-800 mb-4">
+                <i class="fa-solid fa-plus text-brand mr-1"></i> Add / Edit Policy
+            </h3>
+            <form method="POST" action="{{ url_for('admin_leave_policies') }}">
+                <input type="hidden" name="policy_id" value="">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Policy Name <span class="text-red-500">*</span></label>
+                    <input type="text" name="name" required
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none"
+                           placeholder="Standard Leave Policy">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea name="description" rows="2"
+                              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none resize-none"
+                              placeholder="Brief description…"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Max Consecutive Days</label>
+                        <input type="number" name="max_consecutive_days" value="30" min="1"
+                               class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Min Days Notice</label>
+                        <input type="number" name="min_days_notice" value="1" min="0"
+                               class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="checkbox" name="carry_forward_allowed" class="rounded">
+                        <span class="text-gray-700">Allow carry-forward</span>
+                    </label>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Carry-Forward Max Days</label>
+                    <input type="number" name="carry_forward_max_days" value="0" min="0"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none">
+                </div>
+                <button type="submit"
+                        class="w-full bg-brand hover:bg-primary-700 text-white font-medium py-2.5 rounded-lg text-sm transition">
+                    Save Policy
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Existing Policies -->
+    <div class="lg:col-span-2">
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h3 class="font-semibold text-gray-800 mb-4">Current Policies</h3>
+            {% if policies %}
+            <div class="space-y-4">
+                {% for p in policies %}
+                <div class="p-5 rounded-lg border border-gray-200">
+                    <div class="flex items-start justify-between mb-3">
+                        <div>
+                            <h4 class="font-semibold text-gray-800">{{ p.name }}
+                                {% if p.is_active %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-1">Active</span>
+                                {% endif %}
+                            </h4>
+                            {% if p.description %}
+                            <p class="text-sm text-gray-500 mt-1">{{ p.description }}</p>
+                            {% endif %}
+                        </div>
+                        <form method="POST" action="{{ url_for('admin_delete_policy', policy_id=p.id) }}"
+                              onsubmit="return confirm('Delete this policy?')">
+                            <button type="submit" class="text-gray-400 hover:text-red-500 p-1">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <p class="text-gray-400 text-xs">Max Consecutive</p>
+                            <p class="font-bold text-gray-700">{{ p.max_consecutive_days }} days</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <p class="text-gray-400 text-xs">Min Notice</p>
+                            <p class="font-bold text-gray-700">{{ p.min_days_notice }} day(s)</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <p class="text-gray-400 text-xs">Carry-Forward</p>
+                            <p class="font-bold text-gray-700">{{ 'Yes' if p.carry_forward_allowed else 'No' }}</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <p class="text-gray-400 text-xs">Carry Max</p>
+                            <p class="font-bold text-gray-700">{{ p.carry_forward_max_days }} days</p>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-3">Last updated: {{ p.updated_at.strftime('%b %d, %Y') if p.updated_at else 'N/A' }}</p>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-400 text-sm text-center py-6">No policies configured yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

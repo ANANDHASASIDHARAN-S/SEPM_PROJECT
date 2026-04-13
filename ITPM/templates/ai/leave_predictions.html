@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}Leave Predictions{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">Leave Pattern & Prediction</h2>
+    <p class="text-gray-500 text-sm mt-1">{{ scope_label }}</p>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm p-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fa-solid fa-chart-line text-brand mr-2"></i>Prediction Overview
+    </h3>
+
+    {% if predictions %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-gray-500 border-b">
+                    <th class="pb-3 font-medium">Name</th>
+                    {% if is_admin %}<th class="pb-3 font-medium">Role</th>{% endif %}
+                    <th class="pb-3 font-medium">Department</th>
+                    {% if is_admin %}<th class="pb-3 font-medium">Reports To</th>{% endif %}
+                    <th class="pb-3 font-medium">Approved Requests</th>
+                    <th class="pb-3 font-medium">Avg Days/Req</th>
+                    <th class="pb-3 font-medium">Avg Notice</th>
+                    <th class="pb-3 font-medium">Top Type</th>
+                    <th class="pb-3 font-medium">Peak Month</th>
+                    <th class="pb-3 font-medium">Pred. Next 30d</th>
+                    <th class="pb-3 font-medium">Pred. Next 90d</th>
+                    <th class="pb-3 font-medium">Risk</th>
+                    <th class="pb-3 font-medium">Prediction Source</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in predictions %}
+                <tr class="border-b border-gray-50 hover:bg-gray-50 align-top">
+                    <td class="py-3">
+                        <p class="font-medium text-gray-800">{{ row.full_name }}</p>
+                        <p class="text-xs text-gray-500 mt-1">{{ row.pattern_summary }}</p>
+                    </td>
+                    {% if is_admin %}
+                    <td class="py-3 capitalize">{{ row.role }}</td>
+                    {% endif %}
+                    <td class="py-3">{{ row.department }}</td>
+                    {% if is_admin %}
+                    <td class="py-3">{{ row.manager_name }}</td>
+                    {% endif %}
+                    <td class="py-3">{{ row.approved_requests }}</td>
+                    <td class="py-3">{{ row.avg_days_per_request }}</td>
+                    <td class="py-3">{{ row.avg_notice_days }} day(s)</td>
+                    <td class="py-3">{{ row.top_leave_type }}</td>
+                    <td class="py-3">{{ row.peak_month }}</td>
+                    <td class="py-3 font-semibold text-gray-800">{{ row.predicted_next_30_days }}</td>
+                    <td class="py-3 font-semibold text-gray-800">{{ row.predicted_next_90_days }}</td>
+                    <td class="py-3">
+                        <span class="status-badge {% if row.risk_level == 'high' %}status-rejected{% elif row.risk_level == 'medium' %}status-pending{% else %}status-approved{% endif %}">
+                            {{ row.risk_level|capitalize }}
+                        </span>
+                    </td>
+                    <td class="py-3">
+                        <span class="text-xs px-2 py-1 rounded-full {% if row.prediction_source.startswith('ai:') %}bg-emerald-100 text-emerald-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+                            {{ 'AI' if row.prediction_source.startswith('ai:') else 'Fallback' }}
+                        </span>
+                        <p class="text-xs text-gray-500 mt-1">{{ row.prediction_source }}</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">No users available for prediction in this scope.</p>
+    {% endif %}
+</div>
+{% endblock %}

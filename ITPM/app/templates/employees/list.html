@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Employees - Resource Allocation System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h1 class="page-title"><i class="fas fa-users"></i> Employees</h1>
+            </div>
+            <div class="col-auto">
+                {% if current_user.role.value in ['Admin', 'HR Manager'] %}
+                <a href="{{ url_for('employees.create_employee') }}" class="btn btn-primary">
+                    <i class="fas fa-user-plus"></i> Add Employee
+                </a>
+                {% endif %}
+                <a href="{{ url_for('employees.export_employees_csv') }}" class="btn btn-success">
+                    <i class="fas fa-download"></i> Export CSV
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filter Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-6">
+                    <input type="text" name="search" class="form-control" placeholder="Search by name or email" value="{{ search }}">
+                </div>
+                <div class="col-md-4">
+                    <select name="department" class="form-select">
+                        <option value="">All Departments</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept }}" {% if dept == department %}selected{% endif %}>{{ dept }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Employees Table -->
+    <div class="card">
+        <div class="card-body">
+            {% if employees.items %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Department</th>
+                            <th>Position</th>
+                            <th>Experience</th>
+                            <th>Current Workload</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for emp in employees.items %}
+                        <tr>
+                            <td>
+                                <strong>{{ emp.get_full_name() }}</strong>
+                            </td>
+                            <td>{{ emp.email }}</td>
+                            <td>{{ emp.department or 'N/A' }}</td>
+                            <td>{{ emp.position or 'N/A' }}</td>
+                            <td>{{ emp.years_of_experience }} years</td>
+                            <td>
+                                {% set workload = emp.get_current_workload() %}
+                                <div class="progress" style="width: 150px;">
+                                    <div class="progress-bar {% if workload >= 100 %}bg-danger{% elif workload >= 80 %}bg-warning{% elif workload >= 50 %}bg-info{% else %}bg-success{% endif %}" 
+                                         style="width: {{ workload }}%">{{ workload|round(1) }}%</div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if emp.is_available %}
+                                <span class="badge bg-success"><i class="fas fa-check"></i> Available</span>
+                                {% else %}
+                                <span class="badge bg-danger"><i class="fas fa-times"></i> Unavailable</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('employees.view_employee', employee_id=emp.id) }}" class="btn btn-sm btn-info" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if current_user.role.value in ['Admin', 'HR Manager'] %}
+                                <a href="{{ url_for('employees.edit_employee', employee_id=emp.id) }}" class="btn btn-sm btn-warning" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('employees.delete_employee', employee_id=emp.id) }}" style="display: inline;" onsubmit="return confirm('Delete this employee?');">
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if employees.pages > 1 %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if employees.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('employees.list_employees', page=employees.prev_num, search=search, department=department) }}">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in employees.iter_pages() %}
+                        {% if page_num %}
+                        <li class="page-item {% if page_num == employees.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('employees.list_employees', page=page_num, search=search, department=department) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if employees.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('employees.list_employees', page=employees.next_num, search=search, department=department) }}">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <p class="text-muted text-center py-5">No employees found</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Resource Allocation System{% endblock %}
+
+{% block content %}
+<style>
+.info-box { background: #e7f3ff; border-left: 4px solid #007bff; padding: 12px; margin: 15px 0; border-radius: 4px; }
+.warning-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin: 15px 0; border-radius: 4px; }
+.success-box { background: #d4edda; border-left: 4px solid #28a745; padding: 12px; margin: 15px 0; border-radius: 4px; }
+.capacity-meter { height: 30px; background: #f0f0f0; border-radius: 4px; overflow: hidden; margin: 10px 0; }
+.capacity-fill { height: 100%; background: linear-gradient(90deg, #28a745, #ffc107, #dc3545); transition: width 0.3s ease; }
+.skill-match { padding: 8px 12px; background: #f8f9fa; border-radius: 4px; margin: 5px 0; }
+.skill-match-good { border-left: 4px solid #28a745; }
+.skill-match-bad { border-left: 4px solid #dc3545; }
+</style>
+
+<div class="container-fluid">
+    <div class="page-header">
+        <h1 class="page-title"><i class="fas fa-user-tie"></i> {{ title }}</h1>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" novalidate id="allocationForm">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label"><i class="fas fa-user"></i> {{ form.employee.label }}</label>
+                                {{ form.employee(class="form-select" + (" is-invalid" if form.employee.errors else ""), id="employeeSelect", onchange="updateCapacity()") }}
+                                {% if form.employee.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.employee.errors %}{{ error }} {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="text-muted d-block mt-2">Select an employee to allocate</small>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label"><i class="fas fa-project-diagram"></i> {{ form.project.label }}</label>
+                                {{ form.project(class="form-select" + (" is-invalid" if form.project.errors else ""), id="projectSelect", onchange="updateProjectInfo()") }}
+                                {% if form.project.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.project.errors %}{{ error }} {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="text-muted d-block mt-2">Select the target project</small>
+                            </div>
+                        </div>
+
+                        <!-- Capacity Display -->
+                        <div id="capacityInfo"></div>
+
+                        <!-- Skill Match Display -->
+                        <div id="skillInfo"></div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label"><i class="fas fa-percent"></i> {{ form.allocation_percentage.label }}</label>
+                                {{ form.allocation_percentage(class="form-control" + (" is-invalid" if form.allocation_percentage.errors else ""), id="allocationInput", type="number", min="0", max="100", onchange="updateCapacity()", oninput="updateCapacity()") }}
+                                <small class="text-muted d-block mt-2">0 - 100%</small>
+                                {% if form.allocation_percentage.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.allocation_percentage.errors %}{{ error }} {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label"><i class="fas fa-calendar"></i> {{ form.end_date.label }}</label>
+                                {{ form.end_date(class="form-control" + (" is-invalid" if form.end_date.errors else "")) }}
+                                <small class="text-muted d-block mt-2">Optional - leave blank for ongoing allocation</small>
+                                {% if form.end_date.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.end_date.errors %}{{ error }} {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label"><i class="fas fa-sticky-note"></i> {{ form.notes.label }}</label>
+                            {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=3) }}
+                            <small class="text-muted d-block mt-2">Add notes for this allocation (optional)</small>
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.notes.errors %}{{ error }} {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            {{ form.submit(class="btn btn-primary btn-lg") }}
+                            <a href="{{ url_for('allocations.list_allocations') }}" class="btn btn-secondary btn-lg">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Information Panel -->
+        <div class="col-lg-5">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Important Rules</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li><strong>Max Workload:</strong> Employee workload cannot exceed 100%</li>
+                        <li><strong>Unique Assignment:</strong> Each employee can only be allocated once per project</li>
+                        <li><strong>Percentage Match:</strong> Allocation % should reflect actual availability</li>
+                        <li><strong>End Date:</strong> Optional - leave blank for indefinite allocations</li>
+                        <li><strong>Skill Match:</strong> Check if employee has required project skills</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Quick Tips</h5>
+                </div>
+                <div class="card-body">
+                    <div class="info-box">
+                        <strong>💡 Capacity Check:</strong> System will warn if allocation would exceed employee capacity
+                    </div>
+                    <div class="info-box">
+                        <strong>🎯 Skill Matching:</strong> See if the employee has the skills required for the project
+                    </div>
+                    <div class="info-box">
+                        <strong>📊 Real-time Updates:</strong> Capacity bar updates as you adjust the percentage
+                    </div>
+                </div>
+            </div>
+
+            <!-- Online Help -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-question-circle"></i> Need Help?</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2"><strong>How to allocate resources:</strong></p>
+                    <ol class="small">
+                        <li>Select an employee from the dropdown</li>
+                        <li>Choose the target project</li>
+                        <li>Set the allocation percentage</li>
+                        <li>Optionally set an end date</li>
+                        <li>Add notes if needed</li>
+                        <li>Click "Create Allocation" to save</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Minimal capacity tracking without AJAX
+document.getElementById('employeeSelect').addEventListener('change', updateCapacity);
+document.getElementById('allocationInput').addEventListener('input', updateCapacity);
+
+function updateCapacity() {
+    const employeeSelect = document.getElementById('employeeSelect');
+    const allocationInput = document.getElementById('allocationInput');
+    const capacityInfo = document.getElementById('capacityInfo');
+    
+    if (!employeeSelect.value || !allocationInput.value) {
+        capacityInfo.innerHTML = '';
+        return;
+    }
+
+    // This is a frontend helper - actual validation happens on server
+    const percentage = parseInt(allocationInput.value) || 0;
+    
+    let html = '<div class="card mb-3 border-info">';
+    html += '<div class="card-header bg-info text-white">';
+    html += '<h6 class="mb-0"><i class="fas fa-battery-three-quarters"></i> Capacity Information</h6>';
+    html += '</div>';
+    html += '<div class="card-body">';
+    
+    if (percentage > 100) {
+        html += '<div class="warning-box"><strong>⚠️ Warning:</strong> Allocation exceeds 100%</div>';
+    } else if (percentage >= 80) {
+        html += '<div class="warning-box"><strong>⚠️ High Allocation:</strong> Employee will have ' + (100 - percentage) + '% capacity remaining</div>';
+    } else if (percentage > 0) {
+        html += '<div class="success-box"><strong>✓ Good:</strong> This allocation is within safe limits</div>';
+    }
+    
+    html += '</div>';
+    html += '</div>';
+    
+    capacityInfo.innerHTML = html;
+}
+
+function updateProjectInfo() {
+    const projectSelect = document.getElementById('projectSelect');
+    // Placeholder for project info updates
+    // In a real scenario, this could fetch project details via AJAX
+}
+</script>
+{% endblock %}

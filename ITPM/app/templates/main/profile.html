@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile - Resource Allocation System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-header">
+        <h1 class="page-title"><i class="fas fa-user-circle"></i> My Profile</h1>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <div style="font-size: 4rem; margin: 20px 0;">
+                        <i class="fas fa-user-circle text-primary"></i>
+                    </div>
+                    <h4>{{ current_user.username }}</h4>
+                    <p class="text-muted">{{ current_user.email }}</p>
+                    <span class="badge bg-primary" style="font-size: 1rem;">{{ current_user.role.value }}</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">Account Information</div>
+                <div class="card-body">
+                    <dl>
+                        <dt>Username</dt>
+                        <dd>{{ current_user.username }}</dd>
+                        
+                        <dt>Email</dt>
+                        <dd>{{ current_user.email }}</dd>
+                        
+                        <dt>Role</dt>
+                        <dd>{{ current_user.role.value }}</dd>
+                        
+                        <dt>Member Since</dt>
+                        <dd>{{ current_user.created_at.strftime('%Y-%m-%d') }}</dd>
+                        
+                        <dt>Status</dt>
+                        <dd>
+                            {% if current_user.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-8">
+            {% if employee %}
+            <div class="card mb-4">
+                <div class="card-header">Employee Profile</div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-md-3">Full Name</dt>
+                        <dd class="col-md-9">{{ employee.get_full_name() }}</dd>
+                        
+                        <dt class="col-md-3">Department</dt>
+                        <dd class="col-md-9">{{ employee.department or 'N/A' }}</dd>
+                        
+                        <dt class="col-md-3">Position</dt>
+                        <dd class="col-md-9">{{ employee.position or 'N/A' }}</dd>
+                        
+                        <dt class="col-md-3">Experience</dt>
+                        <dd class="col-md-9">{{ employee.years_of_experience }} years</dd>
+                        
+                        <dt class="col-md-3">Hire Date</dt>
+                        <dd class="col-md-9">{{ employee.hire_date.strftime('%Y-%m-%d') if employee.hire_date else 'N/A' }}</dd>
+                    </dl>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">Skills</div>
+                <div class="card-body">
+                    {% if employee.skills %}
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for skill in employee.skills %}
+                        <span class="badge bg-primary">
+                            <i class="fas fa-star"></i> {{ skill.name }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No skills assigned</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">Workload Overview</div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-value">{{ allocations|length }}</div>
+                                <div class="stat-label">Active Projects</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-value">
+                                    {% set current_workload = employee.get_current_workload() %}
+                                    {{ current_workload|round(1) }}%
+                                </div>
+                                <div class="stat-label">Current Workload</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-value">
+                                    {% set available = 100 - employee.get_current_workload() %}
+                                    {{ available|round(1) }}%
+                                </div>
+                                <div class="stat-label">Available Capacity</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">Current Projects</div>
+                <div class="card-body">
+                    {% if allocations %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Project</th>
+                                    <th>Status</th>
+                                    <th>Allocation</th>
+                                    <th>End Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for alloc in allocations %}
+                                <tr>
+                                    <td><strong>{{ alloc.project.name }}</strong></td>
+                                    <td>
+                                        <span class="badge" style="background-color: 
+                                            {% if alloc.project.status == 'Completed' %}#28a745
+                                            {% elif alloc.project.status == 'In Progress' %}#17a2b8
+                                            {% elif alloc.project.status == 'On Hold' %}#ffc107
+                                            {% elif alloc.project.status == 'Cancelled' %}#dc3545
+                                            {% else %}#6c757d{% endif %}">
+                                            {{ alloc.project.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ alloc.allocation_percentage }}%</span>
+                                    </td>
+                                    <td>{{ alloc.end_date.strftime('%Y-%m-%d') if alloc.end_date else 'Open-ended' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4">No active projects</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> You don't have an employee profile yet
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

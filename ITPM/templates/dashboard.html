@@ -1,0 +1,298 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">
+        {% if current_user.role == 'admin' %}Admin Dashboard
+        {% elif current_user.role == 'manager' %}Manager Dashboard
+        {% else %}My Dashboard{% endif %}
+    </h2>
+    <p class="text-gray-500 text-sm mt-1">Welcome back, {{ current_user.first_name }}!</p>
+</div>
+
+<div class="mb-6 rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+        <h3 class="text-sm font-semibold text-cyan-900 flex items-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            AI Assistant
+        </h3>
+        {% if current_user.role == 'admin' %}
+        <div class="flex items-center gap-2 text-xs">
+            <span class="px-2 py-1 rounded-full {% if ai_smart_apply_helper_enabled %}bg-emerald-100 text-emerald-800{% else %}bg-gray-200 text-gray-700{% endif %}">
+                Smart Helper: {{ 'ON' if ai_smart_apply_helper_enabled else 'OFF' }}
+            </span>
+            <span class="px-2 py-1 rounded-full {% if ai_policy_precheck_enabled %}bg-emerald-100 text-emerald-800{% else %}bg-gray-200 text-gray-700{% endif %}">
+                Policy Pre-check: {{ 'ON' if ai_policy_precheck_enabled else 'OFF' }}
+            </span>
+            <span class="px-2 py-1 rounded-full {% if ai_ollama_enabled %}bg-emerald-100 text-emerald-800{% else %}bg-gray-200 text-gray-700{% endif %}">
+                Ollama: {{ ai_ollama_model if ai_ollama_enabled else 'OFF' }}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+    {% if current_user.role == 'admin' %}
+    <p class="text-xs text-cyan-800 mt-2">
+        Runtime status and feature flags are shown here for administrators only.
+    </p>
+    {% elif current_user.role == 'employee' %}
+    <p class="text-xs text-cyan-800 mt-2">
+        AI guidance appears on the Apply Leave page while you select dates and write your reason.
+        <a href="{{ url_for('apply_leave') }}" class="font-semibold underline hover:no-underline">Open Apply Leave</a>
+    </p>
+    {% else %}
+    <p class="text-xs text-cyan-800 mt-2">
+        AI helper is employee-facing on the Apply Leave page. Runtime status is visible to administrators only.
+    </p>
+    {% endif %}
+</div>
+
+<!-- ─── ADMIN DASHBOARD ──────────────────────────────────────── -->
+{% if current_user.role == 'admin' %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+    <div class="stat-card bg-white rounded-xl shadow-sm p-5 border-l-4 border-brand">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Employees</p>
+                <p class="text-3xl font-bold text-gray-800 mt-1">{{ total_employees }}</p>
+            </div>
+            <div class="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-users text-brand text-xl"></i>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card bg-white rounded-xl shadow-sm p-5 border-l-4 border-indigo-500">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Managers</p>
+                <p class="text-3xl font-bold text-gray-800 mt-1">{{ total_managers }}</p>
+            </div>
+            <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-user-tie text-indigo-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card bg-white rounded-xl shadow-sm p-5 border-l-4 border-amber-500">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Pending Requests</p>
+                <p class="text-3xl font-bold text-gray-800 mt-1">{{ pending_requests }}</p>
+            </div>
+            <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-hourglass-half text-amber-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider">On Leave Today</p>
+                <p class="text-3xl font-bold text-gray-800 mt-1">{{ approved_today }}</p>
+            </div>
+            <div class="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-calendar-check text-green-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Requests -->
+<div class="bg-white rounded-xl shadow-sm p-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fa-solid fa-clock-rotate-left text-brand mr-2"></i>Recent Leave Requests
+    </h3>
+    {% if recent_requests %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-gray-500 border-b">
+                    <th class="pb-3 font-medium">Employee</th>
+                    <th class="pb-3 font-medium">Type</th>
+                    <th class="pb-3 font-medium">Dates</th>
+                    <th class="pb-3 font-medium">Days</th>
+                    <th class="pb-3 font-medium">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in recent_requests %}
+                <tr class="border-b border-gray-50 hover:bg-gray-50">
+                    <td class="py-3">{{ req.applicant.full_name }}</td>
+                    <td class="py-3">{{ req.leave_type.name }}</td>
+                    <td class="py-3">{{ req.start_date.strftime('%b %d') }} – {{ req.end_date.strftime('%b %d, %Y') }}</td>
+                    <td class="py-3">{{ req.total_days|int }}</td>
+                    <td class="py-3">
+                        <span class="status-badge status-{{ req.status }}">{{ req.status|capitalize }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">No leave requests yet.</p>
+    {% endif %}
+</div>
+
+<!-- ─── MANAGER DASHBOARD ────────────────────────────────────── -->
+{% elif current_user.role == 'manager' %}
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+    <div class="stat-card bg-white rounded-xl shadow-sm p-5 border-l-4 border-brand">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Team Members</p>
+                <p class="text-3xl font-bold text-gray-800 mt-1">{{ team_count }}</p>
+            </div>
+            <div class="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-people-group text-brand text-xl"></i>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card bg-white rounded-xl shadow-sm p-5 border-l-4 border-amber-500">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Pending Approvals</p>
+                <p class="text-3xl font-bold text-gray-800 mt-1">{{ pending_requests|length }}</p>
+            </div>
+            <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-inbox text-amber-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider">On Leave Today</p>
+                <p class="text-3xl font-bold text-gray-800 mt-1">{{ team_on_leave|length }}</p>
+            </div>
+            <div class="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-calendar-check text-green-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pending Requests Quick View -->
+{% if pending_requests %}
+<div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fa-solid fa-inbox text-amber-500 mr-2"></i>Pending Requests
+    </h3>
+    <div class="space-y-3">
+        {% for req in pending_requests %}
+        <div class="flex items-center justify-between p-4 bg-amber-50/50 rounded-lg border border-amber-100">
+            <div>
+                <p class="font-medium text-gray-800">{{ req.applicant.full_name }}</p>
+                <p class="text-sm text-gray-500">{{ req.leave_type.name }} · {{ req.start_date.strftime('%b %d') }} – {{ req.end_date.strftime('%b %d') }} · {{ req.total_days|int }} day(s)</p>
+            </div>
+            <a href="{{ url_for('leave_requests') }}" class="text-brand hover:underline text-sm font-medium">
+                Review <i class="fa-solid fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Team On Leave Today -->
+{% if team_on_leave %}
+<div class="bg-white rounded-xl shadow-sm p-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fa-solid fa-umbrella-beach text-green-500 mr-2"></i>Team Members on Leave Today
+    </h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {% for req in team_on_leave %}
+        <div class="flex items-center gap-3 p-3 bg-green-50/50 rounded-lg border border-green-100">
+            <div class="w-9 h-9 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">
+                {{ req.applicant.first_name[0] }}{{ req.applicant.last_name[0] }}
+            </div>
+            <div>
+                <p class="font-medium text-sm">{{ req.applicant.full_name }}</p>
+                <p class="text-xs text-gray-500">{{ req.leave_type.name }} · until {{ req.end_date.strftime('%b %d') }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- ─── EMPLOYEE DASHBOARD ───────────────────────────────────── -->
+{% else %}
+<!-- Leave Balances -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+    {% for bal in balances %}
+    <div class="bg-white rounded-xl shadow-sm p-5">
+        <div class="flex items-center justify-between mb-3">
+            <h4 class="font-semibold text-gray-700 text-sm">{{ bal.leave_type.name }}</h4>
+            <span class="text-xs text-gray-400">{{ bal.year }}</span>
+        </div>
+        <div class="flex items-end gap-4">
+            <div>
+                <p class="text-3xl font-bold text-brand">{{ bal.remaining_days|int }}</p>
+                <p class="text-xs text-gray-400">remaining</p>
+            </div>
+            <div class="flex-1">
+                <div class="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>Used: {{ bal.used_days|int }}</span>
+                    <span>Total: {{ bal.total_days|int }}</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    {% set pct = (bal.used_days / bal.total_days * 100) if bal.total_days > 0 else 0 %}
+                    <div class="h-2 rounded-full {% if pct > 80 %}bg-red-500{% elif pct > 50 %}bg-amber-500{% else %}bg-brand{% endif %}"
+                         style="width: {{ pct|int }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Quick Actions -->
+<div class="flex gap-3 mb-8">
+    <a href="{{ url_for('apply_leave') }}"
+       class="inline-flex items-center gap-2 bg-brand hover:bg-primary-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition">
+        <i class="fa-solid fa-paper-plane"></i> Apply for Leave
+    </a>
+    <a href="{{ url_for('leave_history') }}"
+       class="inline-flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-5 py-2.5 rounded-lg text-sm font-medium border transition">
+        <i class="fa-solid fa-clock-rotate-left"></i> View History
+    </a>
+</div>
+
+<!-- Recent Requests -->
+<div class="bg-white rounded-xl shadow-sm p-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fa-solid fa-clock-rotate-left text-brand mr-2"></i>Recent Requests
+    </h3>
+    {% if recent_requests %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-gray-500 border-b">
+                    <th class="pb-3 font-medium">Type</th>
+                    <th class="pb-3 font-medium">Dates</th>
+                    <th class="pb-3 font-medium">Days</th>
+                    <th class="pb-3 font-medium">Status</th>
+                    <th class="pb-3 font-medium">Applied</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in recent_requests %}
+                <tr class="border-b border-gray-50 hover:bg-gray-50">
+                    <td class="py-3">{{ req.leave_type.name }}</td>
+                    <td class="py-3">{{ req.start_date.strftime('%b %d') }} – {{ req.end_date.strftime('%b %d, %Y') }}</td>
+                    <td class="py-3">{{ req.total_days|int }}</td>
+                    <td class="py-3">
+                        <span class="status-badge status-{{ req.status }}">{{ req.status|capitalize }}</span>
+                    </td>
+                    <td class="py-3 text-gray-400">{{ req.created_at.strftime('%b %d') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">No leave requests yet. Apply for your first leave!</p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

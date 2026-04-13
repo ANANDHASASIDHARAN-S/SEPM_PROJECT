@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Workforce Report - Resource Allocation System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h1 class="page-title"><i class="fas fa-chart-line"></i> Workforce Utilization Report</h1>
+            </div>
+            <div class="col-auto">
+                <a href="{{ url_for('employees.export_employees_csv') }}" class="btn btn-success">
+                    <i class="fas fa-download"></i> Download as CSV
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            {% if report_data %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Department</th>
+                            <th>Position</th>
+                            <th>Skills</th>
+                            <th>Current Workload</th>
+                            <th>Available Capacity</th>
+                            <th>Projects</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for emp in report_data %}
+                        <tr>
+                            <td>
+                                <strong>
+                                    <a href="{{ url_for('employees.view_employee', employee_id=emp.id) }}">
+                                        {{ emp.name }}
+                                    </a>
+                                </strong>
+                            </td>
+                            <td>{{ emp.department or 'N/A' }}</td>
+                            <td>{{ emp.position or 'N/A' }}</td>
+                            <td>{{ emp.skills_count }}</td>
+                            <td>
+                                <div class="progress" style="min-width: 100px;">
+                                    <div class="progress-bar {% if emp.current_workload >= 100 %}bg-danger{% elif emp.current_workload >= 80 %}bg-warning{% elif emp.current_workload >= 50 %}bg-info{% else %}bg-success{% endif %}" 
+                                         style="width: {{ emp.current_workload }}%">
+                                        {{ emp.current_workload|round(1) }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge {% if emp.available_capacity > 50 %}bg-success{% elif emp.available_capacity > 20 %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ emp.available_capacity|round(1) }}%
+                                </span>
+                            </td>
+                            <td>{{ emp.allocations_count }}</td>
+                            <td>
+                                {% if emp.is_available %}
+                                <span class="badge bg-success"><i class="fas fa-check"></i> Available</span>
+                                {% else %}
+                                <span class="badge bg-danger"><i class="fas fa-times"></i> Unavailable</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Summary Stats -->
+            <hr class="my-4">
+            <div class="row text-center">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-value">{{ report_data|length }}</div>
+                        <div class="stat-label">Total Employees</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-value">
+                            {% set fully_utilized = report_data|selectattr('current_workload', 'ge', 100)|list|length %}
+                            {{ fully_utilized }}
+                        </div>
+                        <div class="stat-label">Fully Utilized</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-value">
+                            {% set available = report_data|selectattr('available_capacity', 'gt', 50)|list|length %}
+                            {{ available }}
+                        </div>
+                        <div class="stat-label">With Capacity</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-value">
+                            {% set total_workload = report_data|map(attribute='current_workload')|sum %}
+                            {% set avg = (total_workload / report_data|length)|round(1) %}
+                            {{ avg }}%
+                        </div>
+                        <div class="stat-label">Avg Workload</div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-5">No employee data available</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Skills Management - Resource Allocation System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h1 class="page-title"><i class="fas fa-star"></i> Skills</h1>
+            </div>
+            <div class="col-auto">
+                {% if current_user.role.value in ['Admin', 'HR Manager'] %}
+                <a href="{{ url_for('admin.create_skill') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Skill
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filter Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-8">
+                    <input type="text" name="search" class="form-control" placeholder="Search skills..." value="{{ search }}">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Skills Table -->
+    <div class="card">
+        <div class="card-body">
+            {% if skills.items %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Skill Name</th>
+                            <th>Description</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for skill in skills.items %}
+                        <tr>
+                            <td><strong>{{ skill.name }}</strong></td>
+                            <td>{{ skill.description[:100] if skill.description else 'N/A' }}{% if skill.description and skill.description|length > 100 %}...{% endif %}</td>
+                            <td><small class="text-muted">{{ skill.created_at.strftime('%Y-%m-%d') }}</small></td>
+                            <td>
+                                {% if current_user.role.value in ['Admin', 'HR Manager'] %}
+                                <a href="{{ url_for('admin.edit_skill', skill_id=skill.id) }}" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('admin.delete_skill', skill_id=skill.id) }}" style="display: inline;" onsubmit="return confirm('Delete this skill?');">
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if skills.pages > 1 %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if skills.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.list_skills', page=skills.prev_num, search=search) }}">
+                            Previous
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in skills.iter_pages() %}
+                        {% if page_num %}
+                        <li class="page-item {% if page_num == skills.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('admin.list_skills', page=page_num, search=search) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if skills.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.list_skills', page=skills.next_num, search=search) }}">
+                            Next
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <p class="text-muted text-center py-5">No skills found</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

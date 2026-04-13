@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Leave Types{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">Leave Types</h2>
+    <p class="text-gray-500 text-sm mt-1">Manage leave categories and annual allowances.</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Add New Leave Type -->
+    <div class="lg:col-span-1">
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h3 class="font-semibold text-gray-800 mb-4">
+                <i class="fa-solid fa-plus text-brand mr-1"></i> Add Leave Type
+            </h3>
+            <form method="POST" action="{{ url_for('admin_leave_types') }}">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Name <span class="text-red-500">*</span></label>
+                    <input type="text" name="name" required
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none"
+                           placeholder="e.g., Annual Leave">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Days Per Year <span class="text-red-500">*</span></label>
+                    <input type="number" name="days_per_year" required min="1" max="365"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none"
+                           placeholder="20">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea name="description" rows="3"
+                              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none resize-none"
+                              placeholder="Brief description…"></textarea>
+                </div>
+                <button type="submit"
+                        class="w-full bg-brand hover:bg-primary-700 text-white font-medium py-2.5 rounded-lg text-sm transition">
+                    Add Leave Type
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Existing Leave Types -->
+    <div class="lg:col-span-2">
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h3 class="font-semibold text-gray-800 mb-4">Existing Leave Types</h3>
+            {% if leave_types %}
+            <div class="space-y-3">
+                {% for lt in leave_types %}
+                <div class="flex items-center justify-between p-4 rounded-lg border {% if lt.is_active %}border-gray-200 bg-white{% else %}border-gray-100 bg-gray-50{% endif %}">
+                    <div>
+                        <p class="font-medium text-gray-800">{{ lt.name }}
+                            {% if not lt.is_active %}<span class="text-xs text-red-400 ml-1">(Inactive)</span>{% endif %}
+                        </p>
+                        <p class="text-sm text-gray-500">{{ lt.days_per_year }} days/year
+                            {% if lt.description %} · {{ lt.description }}{% endif %}
+                        </p>
+                    </div>
+                    <form method="POST" action="{{ url_for('admin_delete_leave_type', lt_id=lt.id) }}"
+                          onsubmit="return confirm('Delete {{ lt.name }}? Related balances and requests will be removed.')">
+                        <button type="submit" class="text-gray-400 hover:text-red-500 p-1" title="Delete">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-400 text-sm text-center py-6">No leave types configured.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

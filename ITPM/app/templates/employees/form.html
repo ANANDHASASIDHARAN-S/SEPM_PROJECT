@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Resource Allocation System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-header">
+        <h1 class="page-title"><i class="fas fa-user"></i> {{ title }}</h1>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.first_name.label }}</label>
+                                {{ form.first_name(class="form-control" + (" is-invalid" if form.first_name.errors else "")) }}
+                                {% if form.first_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.first_name.errors %}{{ error }} {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.last_name.label }}</label>
+                                {{ form.last_name(class="form-control" + (" is-invalid" if form.last_name.errors else "")) }}
+                                {% if form.last_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.last_name.errors %}{{ error }} {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">{{ form.email.label }}</label>
+                            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.email.errors %}{{ error }} {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.department.label }}</label>
+                                {{ form.department(class="form-control" + (" is-invalid" if form.department.errors else "")) }}
+                                {% if form.department.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.department.errors %}{{ error }} {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.position.label }}</label>
+                                {{ form.position(class="form-control" + (" is-invalid" if form.position.errors else "")) }}
+                                {% if form.position.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.position.errors %}{{ error }} {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.years_of_experience.label }}</label>
+                                {{ form.years_of_experience(class="form-control" + (" is-invalid" if form.years_of_experience.errors else "")) }}
+                                {% if form.years_of_experience.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.years_of_experience.errors %}{{ error }} {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.availability.label }}</label>
+                                {{ form.availability(class="form-control" + (" is-invalid" if form.availability.errors else "")) }}
+                                {% if form.availability.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.availability.errors %}{{ error }} {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.hire_date.label }}</label>
+                                {{ form.hire_date(class="form-control" + (" is-invalid" if form.hire_date.errors else "")) }}
+                                {% if form.hire_date.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.hire_date.errors %}{{ error }} {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label d-block">{{ form.is_available.label }}</label>
+                                <div class="form-check form-switch">
+                                    {{ form.is_available(class="form-check-input") }}
+                                    <label class="form-check-label">Currently Available</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label">{{ form.skills.label }}</label>
+                            {{ form.skills(class="form-select" + (" is-invalid" if form.skills.errors else ""), size="5") }}
+                            <small class="text-muted d-block mt-2">Hold Ctrl (Cmd on Mac) to select multiple skills</small>
+                            {% if form.skills.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.skills.errors %}{{ error }} {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            {{ form.submit(class="btn btn-primary") }}
+                            <a href="{{ url_for('employees.list_employees') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">Help</div>
+                <div class="card-body">
+                    <p><strong>Skills:</strong> Select the employee's technical skills and competencies.</p>
+                    <p><strong>Availability:</strong> Percentage of time available (100% = full-time).</p>
+                    <p><strong>Experience:</strong> Years of professional experience.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}Apply for Leave{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">Apply for Leave</h2>
+    <p class="text-gray-500 text-sm mt-1">Submit a new leave request to your manager.</p>
+</div>
+
+<div class="max-w-2xl">
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <form id="leave-apply-form"
+              method="POST"
+              action="{{ url_for('apply_leave') }}"
+              data-ai-helper-enabled="{{ 'true' if ai_smart_apply_helper_enabled else 'false' }}"
+              data-ai-precheck-enabled="{{ 'true' if ai_policy_precheck_enabled else 'false' }}"
+              data-ai-ollama-enabled="{{ 'true' if ai_ollama_enabled else 'false' }}"
+              data-runtime-status-visible="false"
+              data-precheck-url="{{ url_for('leave_precheck') }}"
+              data-ollama-status-url="{{ url_for('ollama_status') }}">
+            <!-- Leave Type -->
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Leave Type <span class="text-red-500">*</span></label>
+                <select name="leave_type_id" required
+                        class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none">
+                    <option value="">Select leave type…</option>
+                    {% for lt in leave_types %}
+                    <option value="{{ lt.id }}">{{ lt.name }} ({{ lt.days_per_year }} days/year)</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Dates -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Start Date <span class="text-red-500">*</span></label>
+                    <input type="date" name="start_date" required
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">End Date <span class="text-red-500">*</span></label>
+                    <input type="date" name="end_date" required
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none">
+                </div>
+            </div>
+
+            <!-- Reason -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                <textarea name="reason" rows="4" placeholder="Briefly describe your reason for leave…"
+                          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none resize-none"></textarea>
+                {% if ai_smart_apply_helper_enabled or ai_policy_precheck_enabled %}
+                <p class="text-xs text-gray-500 mt-2">
+                    Smart Apply Helper provides live guidance before submission.
+                </p>
+                {% if ai_ollama_enabled %}
+                <p class="text-xs text-emerald-700 mt-1">
+                    Local AI mode active via Ollama ({{ ai_ollama_model }}).
+                </p>
+                {% endif %}
+                {% endif %}
+            </div>
+
+            {% if ai_smart_apply_helper_enabled or ai_policy_precheck_enabled %}
+            <div id="ai-helper-panel" class="mb-6 rounded-xl border border-gray-200 bg-gray-50 p-4" aria-live="polite">
+                <div class="flex items-center justify-between gap-3 mb-2">
+                    <h4 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles text-brand"></i>
+                        Smart Apply Helper
+                    </h4>
+                    <span id="ai-helper-status" class="text-xs px-2 py-1 rounded-full bg-gray-200 text-gray-700">Waiting</span>
+                </div>
+                <p id="ai-helper-summary" class="text-sm text-gray-700 mb-3">
+                    Select leave type and dates to see policy pre-check guidance.
+                </p>
+                <p id="ai-helper-source-note" class="text-xs text-gray-500 mb-3">
+                    Guidance source: Rule engine.
+                </p>
+
+                <div class="mb-3">
+                    <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Checks</p>
+                    <ul id="ai-helper-issues" class="space-y-1 text-sm text-gray-700"></ul>
+                </div>
+
+                <div>
+                    <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Suggestions</p>
+                    <ul id="ai-helper-suggestions" class="space-y-1 text-sm text-gray-700"></ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Submit -->
+            <div class="flex items-center gap-3">
+                <button type="submit"
+                        class="bg-brand hover:bg-primary-700 text-white font-medium px-6 py-2.5 rounded-lg text-sm transition flex items-center gap-2">
+                    <i class="fa-solid fa-paper-plane"></i> Submit Request
+                </button>
+                <a href="{{ url_for('dashboard') }}" class="text-gray-500 hover:text-gray-700 text-sm">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Current Balances Info -->
+    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-5">
+        <h4 class="text-sm font-semibold text-blue-800 mb-2">
+            <i class="fa-solid fa-circle-info mr-1"></i> Your Current Balances
+        </h4>
+        <p class="text-xs text-blue-600 mb-3">Make sure you have sufficient balance before applying.</p>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {% for lt in leave_types %}
+            <div class="bg-white rounded-lg p-2 text-center">
+                <p class="text-xs text-gray-500">{{ lt.name }}</p>
+                <p class="text-lg font-bold text-brand">{{ lt.days_per_year }}</p>
+                <p class="text-xs text-gray-400">days/year</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

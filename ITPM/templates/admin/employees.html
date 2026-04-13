@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Manage Employees{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800">Employees</h2>
+        <p class="text-gray-500 text-sm mt-1">Manage all employees in the system.</p>
+    </div>
+    <a href="{{ url_for('admin_add_user') }}"
+       class="bg-brand hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+        <i class="fa-solid fa-user-plus"></i> Add Employee
+    </a>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm p-6">
+    {% if employees %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-gray-500 border-b">
+                    <th class="pb-3 font-medium">Name</th>
+                    <th class="pb-3 font-medium">Username</th>
+                    <th class="pb-3 font-medium">Email</th>
+                    <th class="pb-3 font-medium">Department</th>
+                    <th class="pb-3 font-medium">Manager</th>
+                    <th class="pb-3 font-medium">Status</th>
+                    <th class="pb-3 font-medium">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in employees %}
+                <tr class="border-b border-gray-50 hover:bg-gray-50">
+                    <td class="py-3">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-brand/10 text-brand flex items-center justify-center text-xs font-bold">
+                                {{ emp.first_name[0] }}{{ emp.last_name[0] }}
+                            </div>
+                            <span class="font-medium">{{ emp.full_name }}</span>
+                        </div>
+                    </td>
+                    <td class="py-3 text-gray-500">{{ emp.username }}</td>
+                    <td class="py-3 text-gray-500">{{ emp.email }}</td>
+                    <td class="py-3">{{ emp.department or '—' }}</td>
+                    <td class="py-3">{{ emp.manager.full_name if emp.manager else '—' }}</td>
+                    <td class="py-3">
+                        {% if emp.is_active %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3">
+                        <div class="flex items-center gap-1">
+                            <form method="POST" action="{{ url_for('admin_toggle_user', user_id=emp.id) }}">
+                                <button type="submit" class="text-gray-400 hover:text-amber-500 p-1" title="{{ 'Deactivate' if emp.is_active else 'Activate' }}">
+                                    <i class="fa-solid {{ 'fa-toggle-on text-green-500' if emp.is_active else 'fa-toggle-off' }}"></i>
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('admin_delete_user', user_id=emp.id) }}"
+                                  onsubmit="return confirm('Delete {{ emp.full_name }}? This cannot be undone.')">
+                                <button type="submit" class="text-gray-400 hover:text-red-500 p-1" title="Delete">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm text-center py-8">No employees found. Add one to get started.</p>
+    {% endif %}
+</div>
+{% endblock %}

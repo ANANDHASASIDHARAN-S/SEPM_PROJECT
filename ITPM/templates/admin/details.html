@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% block title %}All Details{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">All Employee & Manager Details</h2>
+    <p class="text-gray-500 text-sm mt-1">Comprehensive view of all personnel and their leave balances for {{ current_year }}.</p>
+</div>
+
+<!-- Managers Section -->
+<div class="mb-8">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fa-solid fa-user-tie text-indigo-500 mr-2"></i>Managers ({{ managers|length }})
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {% for mgr in managers %}
+        <div class="bg-white rounded-xl shadow-sm p-5">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">
+                    {{ mgr.first_name[0] }}{{ mgr.last_name[0] }}
+                </div>
+                <div>
+                    <p class="font-semibold text-gray-800">{{ mgr.full_name }}</p>
+                    <p class="text-xs text-gray-500">{{ mgr.department or 'No department' }} · {{ mgr.email }}</p>
+                </div>
+                <span class="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                      {% if mgr.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                    {{ 'Active' if mgr.is_active else 'Inactive' }}
+                </span>
+            </div>
+            <div class="text-sm text-gray-500">
+                <p><strong>Team:</strong> {{ mgr.team_members|length }} member(s)</p>
+                {% for member in mgr.team_members %}
+                <span class="inline-block bg-gray-100 rounded px-2 py-0.5 text-xs mr-1 mt-1">{{ member.full_name }}</span>
+                {% endfor %}
+            </div>
+            <!-- Leave Balances -->
+            {% set balances = mgr.leave_balances %}
+            {% if balances %}
+            <div class="mt-3 grid grid-cols-2 gap-2">
+                {% for bal in balances if bal.year == current_year %}
+                <div class="bg-gray-50 rounded p-2 text-xs">
+                    <span class="text-gray-500">{{ bal.leave_type.name }}</span><br>
+                    <span class="font-bold text-gray-700">{{ bal.remaining_days|int }}/{{ bal.total_days|int }}</span> remaining
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Employees Section -->
+<div>
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fa-solid fa-users text-brand mr-2"></i>Employees ({{ employees|length }})
+    </h3>
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-gray-500 border-b">
+                        <th class="pb-3 font-medium">Name</th>
+                        <th class="pb-3 font-medium">Email</th>
+                        <th class="pb-3 font-medium">Department</th>
+                        <th class="pb-3 font-medium">Manager</th>
+                        <th class="pb-3 font-medium">Status</th>
+                        <th class="pb-3 font-medium">Leave Balances</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for emp in employees %}
+                    <tr class="border-b border-gray-50 hover:bg-gray-50">
+                        <td class="py-3 font-medium">
+                            <div class="flex items-center gap-2">
+                                <div class="w-7 h-7 rounded-full bg-brand/10 text-brand flex items-center justify-center text-xs font-bold">
+                                    {{ emp.first_name[0] }}{{ emp.last_name[0] }}
+                                </div>
+                                {{ emp.full_name }}
+                            </div>
+                        </td>
+                        <td class="py-3 text-gray-500">{{ emp.email }}</td>
+                        <td class="py-3">{{ emp.department or '—' }}</td>
+                        <td class="py-3">{{ emp.manager.full_name if emp.manager else '—' }}</td>
+                        <td class="py-3">
+                            {% if emp.is_active %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            <div class="flex gap-1 flex-wrap">
+                                {% for bal in emp.leave_balances if bal.year == current_year %}
+                                <span class="inline-block bg-gray-100 rounded px-2 py-0.5 text-xs"
+                                      title="{{ bal.leave_type.name }}">
+                                    {{ bal.leave_type.name[:3] }}: {{ bal.remaining_days|int }}/{{ bal.total_days|int }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block title %}Reports{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">Reports & Analytics</h2>
+    <p class="text-gray-500 text-sm mt-1">Overview of leave activity for {{ current_year }}.</p>
+</div>
+
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+    <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-blue-500">
+        <p class="text-xs text-gray-500 uppercase tracking-wider">Total Requests</p>
+        <p class="text-3xl font-bold text-gray-800 mt-1">{{ total_requests }}</p>
+        <p class="text-xs text-gray-400 mt-1">Year {{ current_year }}</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500">
+        <p class="text-xs text-gray-500 uppercase tracking-wider">Approved</p>
+        <p class="text-3xl font-bold text-green-600 mt-1">{{ approved_count }}</p>
+        <p class="text-xs text-gray-400 mt-1">
+            {% if total_requests > 0 %}{{ (approved_count / total_requests * 100)|round(1) }}%{% else %}0%{% endif %}
+        </p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-red-500">
+        <p class="text-xs text-gray-500 uppercase tracking-wider">Rejected</p>
+        <p class="text-3xl font-bold text-red-600 mt-1">{{ rejected_count }}</p>
+        <p class="text-xs text-gray-400 mt-1">
+            {% if total_requests > 0 %}{{ (rejected_count / total_requests * 100)|round(1) }}%{% else %}0%{% endif %}
+        </p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-amber-500">
+        <p class="text-xs text-gray-500 uppercase tracking-wider">Pending</p>
+        <p class="text-3xl font-bold text-amber-600 mt-1">{{ pending_count }}</p>
+        <p class="text-xs text-gray-400 mt-1">Awaiting approval</p>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Leave Type Breakdown -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <h3 class="font-semibold text-gray-800 mb-4">
+            <i class="fa-solid fa-chart-pie text-brand mr-2"></i>By Leave Type
+        </h3>
+        {% if type_stats %}
+        <div class="space-y-3">
+            {% set max_count = type_stats|map(attribute='count')|max if type_stats|map(attribute='count')|list else 1 %}
+            {% for ts in type_stats %}
+            <div>
+                <div class="flex justify-between text-sm mb-1">
+                    <span class="font-medium text-gray-700">{{ ts.name }}</span>
+                    <span class="text-gray-500">{{ ts.count }} request{{ 's' if ts.count != 1 }}</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-3">
+                    {% set pct = (ts.count / max_count * 100) if max_count > 0 else 0 %}
+                    <div class="bg-brand h-3 rounded-full transition-all" style="width: {{ pct|int }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-400 text-sm">No data available.</p>
+        {% endif %}
+    </div>
+
+    <!-- Department Breakdown -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <h3 class="font-semibold text-gray-800 mb-4">
+            <i class="fa-solid fa-building text-indigo-500 mr-2"></i>By Department
+        </h3>
+        {% if dept_stats %}
+        <div class="space-y-3">
+            {% set max_dept = dept_stats|map(attribute='count')|max if dept_stats|map(attribute='count')|list else 1 %}
+            {% for ds in dept_stats %}
+            <div>
+                <div class="flex justify-between text-sm mb-1">
+                    <span class="font-medium text-gray-700">{{ ds.name }}</span>
+                    <span class="text-gray-500">{{ ds.count }} request{{ 's' if ds.count != 1 }}</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-3">
+                    {% set pct = (ds.count / max_dept * 100) if max_dept > 0 else 0 %}
+                    <div class="bg-indigo-500 h-3 rounded-full transition-all" style="width: {{ pct|int }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-400 text-sm">No data available.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Audit Log -->
+<div class="bg-white rounded-xl shadow-sm p-6">
+    <h3 class="font-semibold text-gray-800 mb-4">
+        <i class="fa-solid fa-clipboard-list text-amber-500 mr-2"></i>Recent Audit Log
+    </h3>
+    {% if audit_logs %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-gray-500 border-b">
+                    <th class="pb-3 font-medium">Timestamp</th>
+                    <th class="pb-3 font-medium">User</th>
+                    <th class="pb-3 font-medium">Action</th>
+                    <th class="pb-3 font-medium">Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in audit_logs %}
+                <tr class="border-b border-gray-50 hover:bg-gray-50">
+                    <td class="py-2 text-gray-400 text-xs">{{ log.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+                    <td class="py-2">{{ log.user.full_name if log.user else '—' }}</td>
+                    <td class="py-2 font-medium">{{ log.action }}</td>
+                    <td class="py-2 text-gray-500 max-w-[300px] truncate">{{ log.details or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">No audit entries.</p>
+    {% endif %}
+</div>
+{% endblock %}
