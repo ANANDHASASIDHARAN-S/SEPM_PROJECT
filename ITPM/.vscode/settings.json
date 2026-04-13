@@ -1,0 +1,8 @@
+{
+  // Jinja templates often contain {{ ... }} inside inline styles; VS Code's CSS validator
+  // flags these as errors even though they render fine at runtime.
+  "css.validate": false,
+  "less.validate": false,
+  "scss.validate": false,
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe"
+}
